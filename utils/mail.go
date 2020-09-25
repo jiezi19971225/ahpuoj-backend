@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"ahpuoj/config"
 	"strconv"
 
 	"gopkg.in/gomail.v2"
@@ -8,10 +9,7 @@ import (
 
 func SendMail(mailTo []string, subject string, body string) error {
 
-	cfg := GetCfg()
-	// cfg := GetTestCfg("../config/config.ini")
-
-	mailcfg, _ := cfg.GetSection("mail")
+	mailcfg, _ := config.Conf.GetSection("mail")
 	mailConn := map[string]string{
 		"user": mailcfg["user"],
 		"pass": mailcfg["pass"],

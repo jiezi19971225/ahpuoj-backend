@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"crypto/sha1"
@@ -41,15 +42,14 @@ func Login(c *gin.Context) {
 		// 更新redis的token,过期时间为15天
 		utils.Consolelog("登录成功")
 		utils.Consolelog(token)
-		conn := REDISPOOL.Get()
+		conn := REDIS.Get()
 		defer conn.Close()
 		reply, err := conn.Do("set", "token:"+req.Username, token)
 		utils.Consolelog(reply, err)
 		conn.Do("expire", "token:"+req.Username, 60*60*24*15)
 		// 设置cookies
-		cfg := utils.GetCfg()
-		domain, _ := cfg.GetValue("project", "cookiedomain")
-		cookieLiveTimeStr, _ := cfg.GetValue("project", "cookielivetime")
+		domain, _ := config.Conf.GetValue("project", "cookiedomain")
+		cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")
 		cookieLiveTime, _ := strconv.Atoi(cookieLiveTimeStr)
 		c.SetCookie("access-token", token, cookieLiveTime, "/", domain, false, false)
 		c.JSON(http.StatusOK, gin.H{
@@ -89,14 +89,13 @@ func Register(c *gin.Context) {
 	}
 	token := utils.CreateToken(user.Username)
 	// 更新redis的token,过期时间为15天
-	conn := REDISPOOL.Get()
+	conn := REDIS.Get()
 	defer conn.Close()
 	conn.Do("set", "token:"+user.Username, token)
 	conn.Do("expire", "token:"+user.Username, 60*60*24*15)
 	// 设置cookies
-	cfg := utils.GetCfg()
-	domain, _ := cfg.GetValue("project", "cookiedomain")
-	cookieLiveTimeStr, _ := cfg.GetValue("project", "cookielivetime")
+	domain, _ := config.Conf.GetValue("project", "cookiedomain")
+	cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")
 	cookieLiveTime, _ := strconv.Atoi(cookieLiveTimeStr)
 	c.SetCookie("access-token", token, cookieLiveTime, "/", domain, false, false)
 	c.JSON(http.StatusOK, gin.H{
@@ -122,8 +121,7 @@ func SendFindPassEmail(c *gin.Context) {
 	// 生成随机字符串
 	token := utils.GetRandomString(30)
 	_, err = DB.Exec("insert into resetpassword(user_id,token,expired_at) values(?,?,date_add(NOW(),INTERVAL 1 hour)) on duplicate key update token = ?,expired_at=date_add(NOW(),INTERVAL 1 hour)", user_id, token, token)
-	cfg := utils.GetCfg()
-	server, _ := cfg.GetValue("project", "server")
+	server, _ := config.Conf.GetValue("project", "server")
 	mailTo := []string{
 		req.Email,
 	}

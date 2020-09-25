@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/controller"
 	"ahpuoj/model"
 	"ahpuoj/utils"
@@ -60,14 +61,13 @@ func JwtauthMiddleware() gin.HandlerFunc {
 							user, _ := c.Get("user")
 							if user, ok := user.(model.User); ok {
 								newToken := utils.CreateToken(user.Username)
-								conn := REDISPOOL.Get()
+								conn := REDIS.Get()
 								defer conn.Close()
 								conn.Do("set", "token:"+user.Username, newToken)
 								conn.Do("expire", "token:"+user.Username, 60*60*24*15)
 								// 返回新的token
-								cfg := utils.GetCfg()
-								domain, _ := cfg.GetValue("project", "server")
-								cookieLiveTimeStr, _ := cfg.GetValue("project", "cookielivetime")
+								domain, _ := config.Conf.GetValue("project", "server")
+								cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")
 								cookieLiveTime, _ := strconv.Atoi(cookieLiveTimeStr)
 								fmt.Println("返回新的token")
 								c.SetCookie("access-token", newToken, cookieLiveTime, "/", domain, false, false)

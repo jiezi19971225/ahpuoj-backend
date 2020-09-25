@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"encoding/json"
@@ -368,7 +369,7 @@ func NologinGetProblem(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	// 查询缓存
-	conn := REDISPOOL.Get()
+	conn := REDIS.Get()
 	defer conn.Close()
 	if cache, err := redis.Bytes(conn.Do("get", "problem:"+c.Param("id"))); err == nil {
 		var jsonData map[string]interface{}
@@ -1050,12 +1051,11 @@ func NologinGetSeries(c *gin.Context) {
 
 // 获取系统可用语言列表的接口
 func NologinGetLanguageList(c *gin.Context) {
-	cfg := utils.GetCfg()
-	numberStr, _ := cfg.GetValue("language", "number")
+	numberStr, _ := config.Conf.GetValue("language", "number")
 	number, _ := strconv.Atoi(numberStr)
-	langmaskStr, _ := cfg.GetValue("language", "mask")
+	langmaskStr, _ := config.Conf.GetValue("language", "mask")
 	langmask, _ := strconv.Atoi(langmaskStr)
-	langname, _ := cfg.GetValue("language", "langname")
+	langname, _ := config.Conf.GetValue("language", "langname")
 	langNameList := strings.Split(langname, ",")
 	languages := []map[string]interface{}{}
 	for i := 0; i < number; i++ {

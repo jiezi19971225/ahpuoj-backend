@@ -1,7 +1,7 @@
 package model
 
 import (
-	"ahpuoj/service/mysql"
+	mysqlDao "ahpuoj/dao/mysql"
 	"ahpuoj/utils"
 	"database/sql"
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 var DB *sqlx.DB
 
 func init() {
-	DB = mysql.Pool
+	DB = mysqlDao.DB
 }
 
 type NullString struct {

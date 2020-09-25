@@ -1,28 +1,26 @@
 package controller
 
 import (
+	"ahpuoj/config"
+	mysqlDao "ahpuoj/dao/mysql"
+	redisDao "ahpuoj/dao/redis"
 	"ahpuoj/model"
-	"ahpuoj/service/mysql"
-	"ahpuoj/service/redisConn"
-	"ahpuoj/utils"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
+	"strconv"
 )
 
 var DB *sqlx.DB
-var REDISPOOL *redis.Pool
+var REDIS *redis.Pool
 var RedisCacheLiveTime int
 
 func init() {
-	DB = mysql.Pool
-	REDISPOOL = redisConn.Pool
-
+	DB = mysqlDao.DB
+	REDIS = redisDao.REDIS
 	// 默认1800
 	RedisCacheLiveTime = 1800
-	if rcltstr, err := utils.GetCfg().GetValue("redis", "cacheLiveTime"); err == nil {
+	if rcltstr, err := config.Conf.GetValue("redis", "cacheLiveTime"); err == nil {
 		if rclt, err := strconv.Atoi(rcltstr); err == nil {
 			RedisCacheLiveTime = rclt
 		}

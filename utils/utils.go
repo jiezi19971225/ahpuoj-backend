@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"ahpuoj/config"
 	"errors"
 	"fmt"
 	"io"
@@ -21,8 +22,7 @@ import (
 )
 
 func Consolelog(contents ...interface{}) {
-	cfg := GetCfg()
-	enviroment, _ := cfg.GetValue("project", "enviroment")
+	enviroment, _ := config.Conf.GetValue("project", "enviroment")
 	if enviroment == "debug" {
 		for _, v := range contents {
 			fmt.Fprintln(gin.DefaultWriter, v)
@@ -53,8 +53,7 @@ func GetRandomString(length int) string {
 }
 
 func SaveFile(file multipart.File, ext string, category string) (string, error) {
-	cfg := GetCfg()
-	uploadDir, _ := cfg.GetValue("project", "uploaddir")
+	uploadDir, _ := config.Conf.GetValue("project", "uploaddir")
 	dateString := time.Now().Format("20060102150405")
 	filename := dateString + GetRandomString(20) + ext
 	filepath := uploadDir + "/" + category + "/" + filename
@@ -77,19 +76,13 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-func GetCfg() *goconfig.ConfigFile {
-	configFilePath := "config/config.ini"
-	cfg, _ := goconfig.LoadConfigFile(configFilePath)
-	return cfg
-}
-
 func GetTestCfg(path string) *goconfig.ConfigFile {
 	cfg, _ := goconfig.LoadConfigFile(path)
 	return cfg
 }
 
 func ConvertTextImgUrl(origin string) string {
-	server, _ := GetCfg().GetValue("project", "server")
+	server, _ := config.Conf.GetValue("project", "server")
 	replaceTo := `<img src="` + server + "/"
 	reg := regexp.MustCompile(`<img src="`)
 	res := reg.ReplaceAllString(origin, replaceTo)

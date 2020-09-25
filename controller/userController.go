@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/model"
+	"ahpuoj/mq"
 	"ahpuoj/request"
-	"ahpuoj/service/rabbitmq"
 	"ahpuoj/utils"
 	"crypto/sha1"
 	"encoding/json"
@@ -120,7 +121,7 @@ func SubmitToTestRun(c *gin.Context) {
 		return
 	}
 
-	conn := REDISPOOL.Get()
+	conn := REDIS.Get()
 	defer conn.Close()
 
 	testrunCount, _ := redis.Int(conn.Do("incr", "testrun:count"))
@@ -136,7 +137,7 @@ func SubmitToTestRun(c *gin.Context) {
 		"Source":       req.Source,
 		"InputText":    req.InputText,
 	})
-	rabbitmq.Publish("oj", "problem", jsondata)
+	mq.Publish("oj", "problem", jsondata)
 	//等待评测机评判
 	var reinfo, ceinfo, costomOut string
 	queryTimes := 0
@@ -270,7 +271,7 @@ func SubmitToJudge(c *gin.Context) {
 			"InputText":    "",
 		})
 
-		rabbitmq.Publish("oj", "problem", jsondata)
+		mq.Publish("oj", "problem", jsondata)
 		c.JSON(http.StatusOK, gin.H{
 			"message":  "提交成功",
 			"show":     true,
@@ -343,8 +344,7 @@ func DownloadDataFile(c *gin.Context) {
 	}
 
 	// 读取文件
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(pid), 10)
 	dataFileName := baseDir + "/" + filename
 
@@ -369,10 +369,9 @@ func UploadAvatar(c *gin.Context) {
 	var user model.User
 	user, _ = GetUserInstance(c)
 	// 如果不是默认头像 删除原头像
-	defaultAvatar, _ := utils.GetCfg().GetValue("preset", "avatar")
+	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
 	if user.Avatar != defaultAvatar {
-		cfg := utils.GetCfg()
-		webDir, _ := cfg.GetValue("project", "webdir")
+		webDir, _ := config.Conf.GetValue("project", "webdir")
 		projectPath := webDir + "/"
 		os.Remove(projectPath + user.Avatar)
 	}

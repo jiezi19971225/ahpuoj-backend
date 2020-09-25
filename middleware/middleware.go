@@ -1,13 +1,12 @@
 package middleware
 
 import (
-	"ahpuoj/service/redisConn"
-
+	redisDao "ahpuoj/dao/redis"
 	"github.com/gomodule/redigo/redis"
 )
 
-var REDISPOOL *redis.Pool
+var REDIS *redis.Pool
 
 func init() {
-	REDISPOOL = redisConn.Pool
+	REDIS = redisDao.REDIS
 }

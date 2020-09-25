@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"database/sql"
@@ -55,7 +56,7 @@ func ImportProblemSet(c *gin.Context) {
 		} else {
 			infos = append(infos, "问题"+problem.Title+"导入成功")
 			pid := problem.Id
-			dataDir, _ := utils.GetCfg().GetValue("project", "datadir")
+			dataDir, _ := config.Conf.GetValue("project", "datadir")
 			baseDir := dataDir + "/" + strconv.Itoa(pid)
 			err = os.MkdirAll(baseDir, 0777)
 			if err != nil {

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/utils"
 	"errors"
 )
@@ -24,7 +25,7 @@ type User struct {
 }
 
 func (user *User) Save() error {
-	defaultAvatar, _ := utils.GetCfg().GetValue("preset", "avatar")
+	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
 	result, err := DB.Exec(`insert into user
 	(email,username,password,passsalt,nick,avatar,submit,solved,defunct,is_compete_user,created_at,updated_at) 
 	values (?,?,?,?,?,?,0,0,0,?,NOW(),NOW())`, user.Email, user.Username, user.Password, user.PassSalt, user.Nick, defaultAvatar, user.IsCompeteUser)

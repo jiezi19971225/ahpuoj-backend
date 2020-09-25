@@ -1,7 +1,7 @@
-package redisConn
+package redis
 
 import (
-	"ahpuoj/utils"
+	"ahpuoj/config"
 	"strings"
 	"time"
 
@@ -9,14 +9,13 @@ import (
 	_ "github.com/gomodule/redigo/redis"
 )
 
-var Pool *redis.Pool
+var REDIS *redis.Pool
 
 func init() {
-	cfg := utils.GetCfg()
-	rediscfg, _ := cfg.GetSection("redis")
+	rediscfg, _ := config.Conf.GetSection("redis")
 	path := strings.Join([]string{rediscfg["host"], ":", rediscfg["port"]}, "")
 
-	Pool = &redis.Pool{
+	REDIS = &redis.Pool{
 		MaxIdle:     100,
 		MaxActive:   10000,
 		Wait:        true,

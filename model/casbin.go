@@ -1,7 +1,7 @@
 package model
 
 import (
-	"ahpuoj/utils"
+	"ahpuoj/config"
 	"github.com/casbin/casbin/v2"
 	xormadapter "github.com/casbin/xorm-adapter/v2"
 	"strings"
@@ -17,8 +17,7 @@ type Casbin struct {
 }
 
 func GetCasbin() *casbin.Enforcer {
-	cfg := utils.GetCfg()
-	dbcfg, _ := cfg.GetSection("mysql")
+	dbcfg, _ := config.Conf.GetSection("mysql")
 	path := strings.Join([]string{dbcfg["user"], ":", dbcfg["password"], "@tcp(", dbcfg["host"], ":", dbcfg["port"], ")/"}, "")
 	adapter, _ := xormadapter.NewAdapter("mysql", path)
 	configFilePath := "config/auth_model.conf"

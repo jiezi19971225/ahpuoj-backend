@@ -1,11 +1,13 @@
 package main
 
 import (
+	_ "ahpuoj/config"
+	_ "ahpuoj/dao/mysql"
+	_ "ahpuoj/dao/redis"
 	"ahpuoj/router"
 )
 
 func main() {
 	r := router.InitRouter()
-	// Listen and Servesr in 0.0.0.0:8080
 	r.Run(":8080")
 }

@@ -1,7 +1,7 @@
-package rabbitmq
+package mq
 
 import (
-	"ahpuoj/utils"
+	"ahpuoj/config"
 	"bytes"
 	"errors"
 	"strings"
@@ -16,8 +16,7 @@ var queues string
 var hasMQ bool = false
 
 func init() {
-	cfg := utils.GetCfg()
-	mqcfg, _ := cfg.GetSection("rabbitmq")
+	mqcfg, _ := config.Conf.GetSection("rabbitmq")
 	path := strings.Join([]string{"amqp://", mqcfg["user"], ":", mqcfg["password"], "@", mqcfg["host"], ":", mqcfg["port"], "/oj"}, "")
 	SetupRMQ(path)
 }

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/utils"
 	"encoding/json"
 	"errors"
@@ -78,8 +79,7 @@ func (problem *Problem) Save() error {
 	lastInsertId, _ := result.LastInsertId()
 	problem.Id = utils.Int64to32(lastInsertId)
 	// 创建数据文件夹
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(problem.Id), 10)
 	utils.Consolelog(baseDir)
 	err = os.MkdirAll(baseDir, 0777)

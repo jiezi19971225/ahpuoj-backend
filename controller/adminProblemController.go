@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"ahpuoj/config"
 	"ahpuoj/model"
+	"ahpuoj/mq"
 	"ahpuoj/request"
-	"ahpuoj/service/rabbitmq"
 	"ahpuoj/utils"
 	"database/sql"
 	"encoding/json"
@@ -61,7 +62,7 @@ func ShowProblem(c *gin.Context) {
 
 func StoreProblem(c *gin.Context) {
 	user, _ := GetUserInstance(c)
-	conn := REDISPOOL.Get()
+	conn := REDIS.Get()
 	defer conn.Close()
 
 	var req request.Problem
@@ -113,7 +114,7 @@ func StoreProblem(c *gin.Context) {
 }
 
 func UpdateProblem(c *gin.Context) {
-	conn := REDISPOOL.Get()
+	conn := REDIS.Get()
 	defer conn.Close()
 
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -256,7 +257,7 @@ func RejudgeSolution(c *gin.Context) {
 		"Source":       info.Source,
 		"InputText":    "",
 	})
-	rabbitmq.Publish("oj", "problem", jsondata)
+	mq.Publish("oj", "problem", jsondata)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "重判提交成功",
 		"show":    true,
@@ -302,7 +303,7 @@ func RejudgeProblem(c *gin.Context) {
 			"Source":       info.Source,
 			"InputText":    "",
 		})
-		rabbitmq.Publish("oj", "problem", jsondata)
+		mq.Publish("oj", "problem", jsondata)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "重判问题成功",
@@ -347,7 +348,7 @@ func ReassignProblem(c *gin.Context) {
 	newAutoIncrement := strconv.Itoa(maxId + 1)
 	DB.Exec("alter table problem auto_increment=" + newAutoIncrement)
 	// 移动文件夹
-	dataDir, _ := utils.GetCfg().GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	oldDir := dataDir + "/" + strconv.Itoa(oldId)
 	newDir := dataDir + "/" + strconv.Itoa(newId)
 	err = os.Rename(oldDir, newDir)
@@ -367,7 +368,7 @@ func IndexProblemData(c *gin.Context) {
 	fileInfos := []map[string]interface{}{}
 
 	id, _ := strconv.Atoi(c.Param("id"))
-	dataDir, _ := utils.GetCfg().GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	// 如果目录不存在 则创建之
 	if isExist, _ := utils.PathExists(baseDir); isExist == false {
@@ -403,7 +404,7 @@ func AddProblemData(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	dataDir, _ := utils.GetCfg().GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	inFileName := baseDir + "/" + req.FileName + ".in"
 	outFileName := baseDir + "/" + req.FileName + ".out"
@@ -440,7 +441,7 @@ func AddProblemDataFile(c *gin.Context) {
 	if utils.CheckError(c, err, "文件上传失败") != nil {
 		return
 	}
-	dataDir, _ := utils.GetCfg().GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	filePath := baseDir + "/" + filehead.Filename
 	outFile, _ := os.Create(filePath)
@@ -461,8 +462,7 @@ func GetProblemData(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	filename := c.Param("filename")
 
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	filepath := baseDir + "/" + filename
 	content, err := ioutil.ReadFile(filepath)
@@ -480,8 +480,7 @@ func GetProblemData(c *gin.Context) {
 func DownloadProblemData(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	filename := c.Param("filename")
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	filepath := baseDir + "/" + filename
 	c.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%s.txt", filename))
@@ -502,8 +501,7 @@ func EditProblemData(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	filename := c.Param("filename")
 
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	filepath := baseDir + "/" + filename
 	err = ioutil.WriteFile(filepath, []byte(req.Content), 0755)
@@ -524,8 +522,7 @@ func DeleteProblemData(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	filename := c.Param("filename")
 
-	cfg := utils.GetCfg()
-	dataDir, _ := cfg.GetValue("project", "datadir")
+	dataDir, _ := config.Conf.GetValue("project", "datadir")
 	baseDir := dataDir + "/" + strconv.FormatInt(int64(id), 10)
 	filepath := baseDir + "/" + filename
 	err = os.Remove(filepath)
