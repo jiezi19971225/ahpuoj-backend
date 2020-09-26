@@ -4,15 +4,12 @@ go 1.13
 
 require (
 	github.com/Unknwon/goconfig v0.0.0-20191126170842-860a72fb44fd
-	github.com/casbin/casbin v1.9.1 // indirect
 	github.com/casbin/casbin/v2 v2.2.2
-	github.com/casbin/xorm-adapter v1.0.0
 	github.com/casbin/xorm-adapter/v2 v2.0.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20191124224453-732737034ffd // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.6.2
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/go-xorm/xorm v0.7.9 // indirect
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
@@ -27,6 +24,9 @@ require (
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	gopkg.in/guregu/null.v4 v4.0.0
+	gorm.io/driver/mysql v1.0.1
+	gorm.io/gorm v1.20.1
 	xorm.io/builder v0.3.7 // indirect
 	xorm.io/core v0.7.3 // indirect
 )

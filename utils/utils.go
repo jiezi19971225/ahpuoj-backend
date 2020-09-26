@@ -107,8 +107,14 @@ func EngNumToInt(engNum string) (int, error) {
 func CheckError(c *gin.Context, err error, msg string) error {
 	if err != nil {
 		Consolelog(err.Error())
+		var message string
+		if msg == "" {
+			message = msg
+		} else {
+			message = err.Error()
+		}
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": msg,
+			"message": message,
 			"show":    true,
 		})
 		return err

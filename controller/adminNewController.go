@@ -4,7 +4,8 @@ import (
 	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
-	"database/sql"
+	"gopkg.in/guregu/null.v4"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 
@@ -15,20 +16,17 @@ func IndexNew(c *gin.Context) {
 	param := c.Query("param")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-	whereString := ""
+
+	query := ORM
 	if len(param) > 0 {
-		whereString += "where title like '%" + param + "%'"
+		query.Where("title like ?", "%"+param+"%")
 	}
-	whereString += " order by top desc, id desc"
-	rows, total, err := model.Paginate(&page, &perpage, "new", []string{"*"}, whereString)
-	if utils.CheckError(c, err, "数据获取失败") != nil {
-		return
-	}
+	var total int64
+	query.Count(&total)
 	news := []model.New{}
-	for rows.Next() {
-		var new model.New
-		rows.StructScan(&new)
-		news = append(news, new)
+	err := query.Scopes(Paginate(c)).Order("top desc,id desc").Find(&news).Error
+	if utils.CheckError(c, err, "") != nil {
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
@@ -41,11 +39,9 @@ func IndexNew(c *gin.Context) {
 
 func ShowNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{
-		Id: id,
-	}
-	err := DB.Get(&new, "select * from new where id = ?", new.Id)
-	if utils.CheckError(c, err, "新闻不存在") != nil {
+	new := model.New{}
+	err := ORM.First(&new, id).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -62,10 +58,10 @@ func StoreNew(c *gin.Context) {
 	}
 	new := model.New{
 		Title:   req.Title,
-		Content: model.NullString{sql.NullString{req.Content, true}},
+		Content: null.StringFrom(req.Content),
 	}
-	err = new.Save()
-	if utils.CheckError(c, err, "新建新闻失败，该新闻已存在") != nil {
+	err = ORM.Create(&new).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -82,12 +78,12 @@ func UpdateNew(c *gin.Context) {
 		return
 	}
 	new := model.New{
-		Id:      id,
+		ID:      id,
 		Title:   req.Title,
-		Content: model.NullString{sql.NullString{req.Content, true}},
+		Content: null.StringFrom(req.Content),
 	}
-	err = new.Update()
-	if utils.CheckError(c, err, "编辑新闻失败，该新闻已存在") != nil {
+	err = ORM.Model(&new).Updates(new).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -98,11 +94,8 @@ func UpdateNew(c *gin.Context) {
 
 func DeleteNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{
-		Id: id,
-	}
-	err := new.Delete()
-	if utils.CheckError(c, err, "删除新闻失败，该新闻不存在") != nil {
+	err := ORM.Delete(model.New{}, id).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -113,9 +106,9 @@ func DeleteNew(c *gin.Context) {
 func ToggleNewStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	new := model.New{
-		Id: id,
+		ID: id,
 	}
-	err := new.ToggleStatus()
+	err := ORM.Model(&new).Update("defunct", gorm.Expr("not defunct")).Error
 	if utils.CheckError(c, err, "更改新闻状态失败，该新闻不存在") != nil {
 		return
 	}
@@ -126,10 +119,24 @@ func ToggleNewStatus(c *gin.Context) {
 
 func ToggleNewTopStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{
-		Id: id,
+	new := model.New{}
+	err := ORM.First(&new, id).Error
+	if utils.CheckError(c, err, "") != nil {
+		return
 	}
-	err := new.ToggleTopStatus()
+
+	var newtop int
+	if new.Top == 0 {
+		var maxtop int
+		ORM.Model(model.New{}).Select("max(top)").Scan(&maxtop)
+		newtop = maxtop + 1
+	} else {
+		newtop = 0
+	}
+	new.Top = newtop
+
+	err = ORM.Save(&new).Error
+
 	if utils.CheckError(c, err, "更改新闻置顶状态失败，该新闻不存在") != nil {
 		return
 	}

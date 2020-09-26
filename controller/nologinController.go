@@ -18,33 +18,30 @@ import (
 // 访客获取新闻列表的接口
 func NologinGetNewList(c *gin.Context) {
 
-	var user model.User
-	user, loggedIn := GetUserInstance(c)
-
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 
-	whereString := ""
+	var user model.User
+	user, loggedIn := GetUserInstance(c)
+
+	query := ORM.Model(model.New{})
 	if !(loggedIn && user.Role != "user") {
-		whereString += " where defunct = 0 "
+		query.Where(" defunct = 0 ")
 	}
 
-	whereString += " order by top desc, id desc"
-
-	rows, total, err := model.Paginate(&page, &perpage, "new", []string{"*"}, whereString)
-	if utils.CheckError(c, err, "数据获取失败") != nil {
+	var total int64
+	query.Count(&total)
+	news := []model.New{}
+	err := query.Scopes(Paginate(c)).Order("top desc,id desc").Find(&news).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
-	news := []model.New{}
-	for rows.Next() {
-		var new model.New
-		rows.StructScan(&new)
-		news = append(news, new)
-	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
 		"page":    page,
+		"perpage": perpage,
 		"data":    news,
 	})
 }

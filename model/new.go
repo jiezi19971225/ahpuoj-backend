@@ -4,16 +4,22 @@ import (
 	"ahpuoj/utils"
 	"encoding/json"
 	"errors"
+	"gopkg.in/guregu/null.v4"
+	"time"
 )
 
 type New struct {
-	Id        int        `db:"id" json:"id" uri:"id"`
-	Title     string     `db:"title" json:"title" binding:"required,max=20"`
-	Content   NullString `db:"content" json:"content"`
-	Top       int        `db:"top" json:"top"`
-	Defunct   int        `db:"defunct" json:"defunct"`
-	CreatedAt string     `db:"created_at" json:"created_at"`
-	UpdatedAt string     `db:"updated_at" json:"updated_at"`
+	ID        int         `db:"id" json:"id" uri:"id"`
+	Title     string      `db:"title" json:"title" binding:"required,max=20"`
+	Content   null.String `db:"content" json:"content"`
+	Top       int         `db:"top" json:"top" gorm:"default:0"`
+	Defunct   int         `db:"defunct" json:"defunct" gorm:"default:0"`
+	CreatedAt time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time   `db:"updated_at" json:"updated_at"`
+}
+
+func (New) TableName() string {
+	return "new"
 }
 
 func (new *New) MarshalJSON() ([]byte, error) {
@@ -30,12 +36,12 @@ func (new *New) Save() error {
 		return err
 	}
 	lastInsertId, _ := result.LastInsertId()
-	new.Id = utils.Int64to32(lastInsertId)
+	new.ID = utils.Int64to32(lastInsertId)
 	return err
 }
 
 func (new *New) Update() error {
-	result, err := DB.Exec(`update new set title = ?,content=?,updated_at = NOW() where id = ?`, new.Title, new.Content.String, new.Id)
+	result, err := DB.Exec(`update new set title = ?,content=?,updated_at = NOW() where id = ?`, new.Title, new.Content.String, new.ID)
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("数据不存在")
@@ -44,7 +50,7 @@ func (new *New) Update() error {
 }
 
 func (new *New) Delete() error {
-	result, err := DB.Exec(`delete from new where id = ?`, new.Id)
+	result, err := DB.Exec(`delete from new where id = ?`, new.ID)
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("数据不存在")
@@ -53,7 +59,7 @@ func (new *New) Delete() error {
 }
 
 func (new *New) ToggleStatus() error {
-	result, err := DB.Exec(`update new set defunct = not defunct,updated_at = NOW() where id = ?`, new.Id)
+	result, err := DB.Exec(`update new set defunct = not defunct,updated_at = NOW() where id = ?`, new.ID)
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("数据不存在")
@@ -64,7 +70,7 @@ func (new *New) ToggleStatus() error {
 func (new *New) ToggleTopStatus() error {
 	var newtop int
 	// 查询top值
-	DB.Get(&new.Top, `select top from new where id = ?`, new.Id)
+	DB.Get(&new.Top, `select top from new where id = ?`, new.ID)
 	if new.Top == 0 {
 		var maxtop int
 		DB.Get(&maxtop, `select max(top) from new`)
@@ -72,7 +78,7 @@ func (new *New) ToggleTopStatus() error {
 	} else {
 		newtop = 0
 	}
-	result, err := DB.Exec(`update new set top = ?, updated_at = NOW() where id = ?`, newtop, new.Id)
+	result, err := DB.Exec(`update new set top = ?, updated_at = NOW() where id = ?`, newtop, new.ID)
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("数据不存在")
