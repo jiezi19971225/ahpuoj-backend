@@ -3,21 +3,36 @@ package model
 import (
 	"ahpuoj/utils"
 	"errors"
+	"gorm.io/gorm"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
 
+type Team1 struct {
+	ID        int            `db:"id" json:"id"`
+	Name      string         `db:"name" json:"name" binding:"required,max=20"`
+	CreatedAt string         `db:"created_at" json:"created_at"`
+	UpdatedAt string         `db:"updated_at" json:"updated_at"`
+	IsDeleted gorm.DeletedAt `db:"is_deleted" json:"is_deleted"`
+	CreatorId int            `db:"creator_id" json:"creator_id"`
+	Users     []User1        `gorm:"many2many:team_user;" json:"userinfos"`
+}
+
+func (Team1) TableName() string {
+	return "team"
+}
+
 type Team struct {
-	Id        int    `db:"id" json:"id"`
-	Name      string `db:"name" json:"name" binding:"required,max=20"`
-	CreatedAt string `db:"created_at" json:"created_at"`
-	UpdatedAt string `db:"updated_at" json:"updated_at"`
-	IsDeleted int    `db:"is_deleted" json:"is_deleted"`
-	CreatorId int    `db:"creator_id" json:"creator_id"`
-	UserInfos []User `json:"userinfos"`
-	UserId    int    `db:"user_id" json:"user_id"`
-	Username  string `db:"username" json:"username"`
+	Id        int            `db:"id" json:"id"`
+	Name      string         `db:"name" json:"name" binding:"required,max=20"`
+	CreatedAt string         `db:"created_at" json:"created_at"`
+	UpdatedAt string         `db:"updated_at" json:"updated_at"`
+	IsDeleted gorm.DeletedAt `db:"is_deleted" json:"is_deleted"`
+	CreatorId int            `db:"creator_id" json:"creator_id"`
+	UserInfos []User         `json:"userinfos"`
+	UserId    int            `db:"user_id" json:"user_id"`
+	Username  string         `db:"username" json:"username"`
 }
 
 func (team *Team) Save() error {

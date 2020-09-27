@@ -6,6 +6,7 @@ import (
 	"ahpuoj/dao/orm"
 	redisDao "ahpuoj/dao/redis"
 	"ahpuoj/model"
+	"ahpuoj/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
@@ -18,6 +19,9 @@ var ORM *gorm.DB
 var REDIS *redis.Pool
 var RedisCacheLiveTime int
 
+/**
+dao层初始化
+*/
 func init() {
 	ORM = orm.ORM
 	DB = mysqlDao.DB
@@ -29,6 +33,15 @@ func init() {
 			RedisCacheLiveTime = rclt
 		}
 	}
+}
+
+/**
+各个service初始化
+*/
+var teamService service.TeamService
+
+func init() {
+	teamService = service.TeamService{ORM}
 }
 
 // 获得user实例

@@ -17,7 +17,7 @@ func IndexNew(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 
-	query := ORM
+	query := ORM.Model(model.New{})
 	if len(param) > 0 {
 		query.Where("title like ?", "%"+param+"%")
 	}
