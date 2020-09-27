@@ -2,14 +2,16 @@ package controller
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/entity"
 	"ahpuoj/model"
 	"ahpuoj/mq"
 	"ahpuoj/request"
 	"ahpuoj/utils"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/guregu/null.v4"
+	"gorm.io/gorm"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,42 +20,25 @@ import (
 )
 
 func IndexProblem(c *gin.Context) {
-	param := c.Query("param")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-	whereString := ""
-	if len(param) > 0 {
-		whereString += " where title like '%" + param + "%' "
-	}
-	whereString += " order by problem.id desc "
-	rows, total, err := model.Paginate(&page, &perpage, "problem inner join user on problem.user_id = user.id", []string{"problem.*", "user.username"}, whereString)
-	if utils.CheckError(c, err, "数据获取失败") != nil {
-		return
-	}
-	var problems []model.Problem
-	for rows.Next() {
-		var problem model.Problem
-		rows.StructScan(&problem)
-		problem.FetchTags()
-		problems = append(problems, problem)
-	}
+
+	results, total := problemService.List(c)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    page,
-		"perpage": perpage,
-		"data":    problems,
+		"page":    c.DefaultQuery("page", "1"),
+		"perpage": c.DefaultQuery("perpage", "20"),
+		"data":    results,
 	})
 }
 
 func ShowProblem(c *gin.Context) {
-	var problem model.Problem
 	id, _ := strconv.Atoi(c.Param("id"))
-	err := DB.Get(&problem, "select * from problem where id = ?", id)
-	if utils.CheckError(c, err, "问题不存在") != nil {
+	problem := entity.Problem{}
+	err := ORM.Preload("Tags").First(&problem, id).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
-	problem.FetchTags()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"problem": problem,
@@ -70,26 +55,29 @@ func StoreProblem(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	problem := model.Problem{
+	problem := entity.Problem{
 		Title:        req.Title,
-		Description:  model.NullString{sql.NullString{String: req.Description, Valid: true}},
-		Input:        model.NullString{sql.NullString{String: req.Input, Valid: true}},
-		Output:       model.NullString{sql.NullString{String: req.Output, Valid: true}},
-		SampleInput:  model.NullString{sql.NullString{String: req.SampleInput, Valid: true}},
-		SampleOutput: model.NullString{sql.NullString{String: req.SampleOutput, Valid: true}},
+		Description:  null.StringFrom(req.Description),
+		Input:        null.StringFrom(req.Input),
+		Output:       null.StringFrom(req.Output),
+		SampleInput:  null.StringFrom(req.SampleInput),
+		SampleOutput: null.StringFrom(req.SampleOutput),
 		Spj:          req.Spj,
 		Level:        req.Level,
-		Hint:         model.NullString{sql.NullString{String: req.Hint, Valid: true}},
+		Hint:         null.StringFrom(req.Hint),
 		TimeLimit:    req.TimeLimit,
 		MemoryLimit:  req.MemoryLimit,
-		UserId:       user.Id,
+		CreatorId:    user.Id,
 	}
-	err = problem.Save()
-	if utils.CheckError(c, err, "新建问题失败，该问题已存在") != nil {
+
+	err = problemService.SaveRecord(&problem)
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
+
 	idStr := strconv.Itoa(user.Id)
-	problemIdStr := strconv.Itoa(problem.Id)
+	problemIdStr := strconv.Itoa(problem.ID)
+
 	if user.Role != "admin" {
 		enforcer := model.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr, "PUT")
@@ -100,16 +88,15 @@ func StoreProblem(c *gin.Context) {
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr+"/data/:filename", "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr+"/data/:filename", "DELETE")
 	}
-	problem.AddTags(req.Tags)
+	problemService.AddTags(&problem, req.Tags)
 	// 同步到 redis 缓存
 	if stringify, err := json.Marshal(problem); err == nil {
-		conn.Do("set", "problem:"+strconv.Itoa(problem.Id), stringify)
-		conn.Do("expire", "problem:"+strconv.Itoa(problem.Id), RedisCacheLiveTime)
+		conn.Do("set", "problem:"+strconv.Itoa(problem.ID), stringify)
+		conn.Do("expire", "problem:"+strconv.Itoa(problem.ID), RedisCacheLiveTime)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "新建问题成功",
 		"show":    true,
-		"problem": problem,
 	})
 }
 
@@ -123,31 +110,31 @@ func UpdateProblem(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	problem := model.Problem{
-		Id:           id,
+	problem := entity.Problem{
+		ID:           id,
 		Title:        req.Title,
-		Description:  model.NullString{sql.NullString{String: req.Description, Valid: true}},
-		Input:        model.NullString{sql.NullString{String: req.Input, Valid: true}},
-		Output:       model.NullString{sql.NullString{String: req.Output, Valid: true}},
-		SampleInput:  model.NullString{sql.NullString{String: req.SampleInput, Valid: true}},
-		SampleOutput: model.NullString{sql.NullString{String: req.SampleOutput, Valid: true}},
+		Description:  null.StringFrom(req.Description),
+		Input:        null.StringFrom(req.Input),
+		Output:       null.StringFrom(req.Output),
+		SampleInput:  null.StringFrom(req.SampleInput),
+		SampleOutput: null.StringFrom(req.SampleOutput),
 		Spj:          req.Spj,
 		Level:        req.Level,
-		Hint:         model.NullString{sql.NullString{String: req.Hint, Valid: true}},
+		Hint:         null.StringFrom(req.Hint),
 		TimeLimit:    req.TimeLimit,
 		MemoryLimit:  req.MemoryLimit,
 	}
 	// 首先清除当前标签
-	problem.RemoveTags()
-	err = problem.Update()
-	problem.AddTags(req.Tags)
-	if utils.CheckError(c, err, "编辑问题失败，问题标题已存在或该问题不存在") != nil {
+	err = ORM.Model(&problem).Updates(problem).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
+
+	problemService.ReplaceTags(&problem, req.Tags)
 	// 同步到 redis 缓存
 	if stringify, err := json.Marshal(problem); err == nil {
-		conn.Do("set", "problem:"+strconv.Itoa(problem.Id), stringify)
-		conn.Do("expire", "problem:"+strconv.Itoa(problem.Id), RedisCacheLiveTime)
+		conn.Do("set", "problem:"+strconv.Itoa(problem.ID), stringify)
+		conn.Do("expire", "problem:"+strconv.Itoa(problem.ID), RedisCacheLiveTime)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "编辑问题成功",
@@ -159,31 +146,13 @@ func UpdateProblem(c *gin.Context) {
 func DeleteProblem(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	user, _ := GetUserInstance(c)
-	problem := model.Problem{
-		Id: id,
+	problem := entity.Problem{
+		ID: id,
 	}
-	err := problem.Delete()
-	if utils.CheckError(c, err, "删除问题失败，该问题不存在") != nil {
-		return
-	}
-	// 删除其他相关数据
-	// 删除source_code
-	DB.Exec("delete source_code from source_code inner join solution on source_code.solution_id = solution.solution_id where solution.problem_id = ?", problem.Id)
-	DB.Exec("delete compileinfo from compileinfo inner join solution on compileinfo.solution_id = solution.solution_id where solution.problem_id = ?", problem.Id)
-	DB.Exec("delete runtimeinfo from runtimeinfo inner join solution on runtimeinfo.solution_id = solution.solution_id where solution.problem_id = ?", problem.Id)
-
-	// 删除solution记录
-	DB.Exec("delete from solution where problem_id = ?", problem.Id)
-
-	// 删除tag关联记录
-	DB.Exec("delete from problem_tag where problem_id = ?", problem.Id)
-	// 删除reply
-	DB.Exec("delete reply from reply inner join issue on reply.issue_id =issue.id where issue.problem_id = ?", problem.Id)
-	// 删除issue
-	DB.Exec("delete from issue where problem_id = ?", problem.Id)
+	problemService.DeleteRecord(&problem)
 
 	idStr := strconv.Itoa(user.Id)
-	problemIdStr := strconv.Itoa(problem.Id)
+	problemIdStr := strconv.Itoa(problem.ID)
 	enforcer := model.GetCasbin()
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr, "PUT")
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr, "DELETE")
@@ -194,9 +163,9 @@ func DeleteProblem(c *gin.Context) {
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr+"/data/:filename", "DELETE")
 	var maxId int
 	// 更新自增起始ID
-	DB.Get(&maxId, "select max(id) from problem")
+	ORM.Model(entity.Problem{}).Select("max(id)").Scan(&maxId)
 	newAutoIncrement := strconv.Itoa(maxId + 1)
-	DB.Exec("alter table problem auto_increment=" + newAutoIncrement)
+	ORM.Exec("alter table problem auto_increment=" + newAutoIncrement)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除问题成功",
@@ -206,13 +175,10 @@ func DeleteProblem(c *gin.Context) {
 
 func ToggleProblemStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	problem := model.Problem{
-		Id: id,
+	problem := entity.Problem{
+		ID: id,
 	}
-	err := problem.ToggleStatus()
-	if utils.CheckError(c, err, "更改问题状态失败，该问题不存在") != nil {
-		return
-	}
+	ORM.Model(&problem).Update("defunct", gorm.Expr("not defunct"))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改问题状态成功",
 		"show":    true,
@@ -433,6 +399,7 @@ func AddProblemData(c *gin.Context) {
 		"info":    infos,
 	})
 }
+
 func AddProblemDataFile(c *gin.Context) {
 	var err error
 	id, _ := strconv.Atoi(c.Param("id"))

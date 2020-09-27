@@ -108,10 +108,7 @@ func ToggleNewStatus(c *gin.Context) {
 	new := model.New{
 		ID: id,
 	}
-	err := ORM.Model(&new).Update("defunct", gorm.Expr("not defunct")).Error
-	if utils.CheckError(c, err, "更改新闻状态失败，该新闻不存在") != nil {
-		return
-	}
+	ORM.Model(&new).Update("defunct", gorm.Expr("not defunct"))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改新闻状态成功",
 	})
@@ -135,11 +132,8 @@ func ToggleNewTopStatus(c *gin.Context) {
 	}
 	new.Top = newtop
 
-	err = ORM.Save(&new).Error
+	ORM.Save(&new)
 
-	if utils.CheckError(c, err, "更改新闻置顶状态失败，该新闻不存在") != nil {
-		return
-	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改新闻置顶状态成功",
 	})

@@ -12,7 +12,7 @@ type Team struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	IsDeleted gorm.DeletedAt `json:"is_deleted"`
 	CreatorId int            `gorm:"column:user_id;" json:"creator_id"`
-	Users     []User         `gorm:"association_autoupdate:false;many2many:team_user;" json:"userinfos"`
+	Users     []User         `gorm:"many2many:team_user;" json:"userinfos"`
 }
 
 func (Team) TableName() string {
