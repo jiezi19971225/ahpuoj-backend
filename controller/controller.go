@@ -39,9 +39,11 @@ func init() {
 各个service初始化
 */
 var teamService service.TeamService
+var tagService service.TagService
 
 func init() {
 	teamService = service.TeamService{ORM}
+	tagService = service.TagService{ORM}
 }
 
 // 获得user实例

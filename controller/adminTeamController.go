@@ -26,11 +26,6 @@ func GetTeam(c *gin.Context) {
 
 func IndexTeam(c *gin.Context) {
 
-	type Result struct {
-		entity.Team
-		Username string `json:"username"`
-	}
-
 	results, total := teamService.List(c)
 
 	c.JSON(http.StatusOK, gin.H{

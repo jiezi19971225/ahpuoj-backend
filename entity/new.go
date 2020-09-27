@@ -8,13 +8,13 @@ import (
 )
 
 type New struct {
-	ID        int         `db:"id" json:"id" uri:"id"`
-	Title     string      `db:"title" json:"title" binding:"required,max=20"`
-	Content   null.String `db:"content" json:"content"`
-	Top       int         `db:"top" json:"top" gorm:"default:0"`
-	Defunct   int         `db:"defunct" json:"defunct" gorm:"default:0"`
-	CreatedAt time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time   `db:"updated_at" json:"updated_at"`
+	ID        int         `json:"id" uri:"id"`
+	Title     string      `json:"title" binding:"required,max=20"`
+	Content   null.String `json:"content"`
+	Top       int         `json:"top" gorm:"default:0"`
+	Defunct   int         `json:"defunct" gorm:"default:0"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 func (New) TableName() string {
