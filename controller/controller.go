@@ -41,11 +41,13 @@ func init() {
 var teamService service.TeamService
 var tagService service.TagService
 var problemService service.ProblemService
+var userService service.UserService
 
 func init() {
 	teamService = service.TeamService{ORM}
 	tagService = service.TagService{ORM}
 	problemService = service.ProblemService{ORM}
+	userService = service.UserService{ORM}
 }
 
 // 获得user实例
