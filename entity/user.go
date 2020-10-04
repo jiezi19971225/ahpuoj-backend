@@ -1,6 +1,9 @@
 package entity
 
-import "gopkg.in/guregu/null.v4"
+import (
+	"gopkg.in/guregu/null.v4"
+	"time"
+)
 
 type User struct {
 	ID            int         `json:"id"`
@@ -13,8 +16,8 @@ type User struct {
 	Submit        int         `json:"submit"`
 	Solved        int         `json:"solved"`
 	Defunct       int         `json:"defunct"`
-	CreatedAt     string      `json:"created_at"`
-	UpdatedAt     string      `json:"updated_at"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 	IsCompeteUser int         `json:"is_compete_user"`
 	RoleId        int         `json:"role_id"`
 }

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"ahpuoj/model"
+	"ahpuoj/entity"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"gopkg.in/guregu/null.v4"
@@ -17,13 +17,13 @@ func IndexNew(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 
-	query := ORM.Model(model.New{})
+	query := ORM.Model(entity.New{})
 	if len(param) > 0 {
 		query.Where("title like ?", "%"+param+"%")
 	}
 	var total int64
 	query.Count(&total)
-	news := []model.New{}
+	news := []entity.New{}
 	err := query.Scopes(Paginate(c)).Order("top desc,id desc").Find(&news).Error
 	if utils.CheckError(c, err, "") != nil {
 		return
@@ -39,7 +39,7 @@ func IndexNew(c *gin.Context) {
 
 func ShowNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{}
+	new := entity.New{}
 	err := ORM.First(&new, id).Error
 	if utils.CheckError(c, err, "") != nil {
 		return
@@ -56,7 +56,7 @@ func StoreNew(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	new := model.New{
+	new := entity.New{
 		Title:   req.Title,
 		Content: null.StringFrom(req.Content),
 	}
@@ -77,7 +77,7 @@ func UpdateNew(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	new := model.New{
+	new := entity.New{
 		ID:      id,
 		Title:   req.Title,
 		Content: null.StringFrom(req.Content),
@@ -94,7 +94,7 @@ func UpdateNew(c *gin.Context) {
 
 func DeleteNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	err := ORM.Delete(model.New{}, id).Error
+	err := ORM.Delete(entity.New{}, id).Error
 	if utils.CheckError(c, err, "") != nil {
 		return
 	}
@@ -105,7 +105,7 @@ func DeleteNew(c *gin.Context) {
 
 func ToggleNewStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{
+	new := entity.New{
 		ID: id,
 	}
 	ORM.Model(&new).Update("defunct", gorm.Expr("not defunct"))
@@ -116,7 +116,7 @@ func ToggleNewStatus(c *gin.Context) {
 
 func ToggleNewTopStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	new := model.New{}
+	new := entity.New{}
 	err := ORM.First(&new, id).Error
 	if utils.CheckError(c, err, "") != nil {
 		return
@@ -125,7 +125,7 @@ func ToggleNewTopStatus(c *gin.Context) {
 	var newtop int
 	if new.Top == 0 {
 		var maxtop int
-		ORM.Model(model.New{}).Select("max(top)").Scan(&maxtop)
+		ORM.Model(entity.New{}).Select("max(top)").Scan(&maxtop)
 		newtop = maxtop + 1
 	} else {
 		newtop = 0

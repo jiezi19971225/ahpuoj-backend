@@ -1,67 +1,50 @@
 package controller
 
 import (
+	"ahpuoj/entity"
 	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"archive/zip"
 	"bytes"
-	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/guregu/null.v4"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func IndexContest(c *gin.Context) {
-	param := c.Query("param")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-	whereString := " where is_deleted = 0 "
-	if len(param) > 0 {
-		whereString += "and name like '%" + param + "%'"
-	}
-	whereString += " order by contest.id desc"
-	rows, total, err := model.Paginate(&page, &perpage, "contest inner join user on contest.user_id = user.id", []string{"contest.*,user.username"}, whereString)
-	if utils.CheckError(c, err, "数据获取失败") != nil {
-		return
-	}
-	contests := []model.Contest{}
-	for rows.Next() {
-		var contest model.Contest
-		rows.StructScan(&contest)
-		contests = append(contests, contest)
-	}
+
+	results, total := contestService.List(c)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    page,
-		"perpage": perpage,
-		"data":    contests,
+		"page":    c.DefaultQuery("page", "1"),
+		"perpage": c.DefaultQuery("perpage", "20"),
+		"data":    results,
 	})
 }
 
 func ShowContest(c *gin.Context) {
-	var contest model.Contest
 	id, _ := strconv.Atoi(c.Param("id"))
-	err := DB.Get(&contest, "select * from contest where id = ?", id)
-	if utils.CheckError(c, err, "竞赛&作业不存在") != nil {
+	contest := entity.Contest{}
+	err := ORM.First(&contest, id).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
-	contest.FetchProblems()
+	result := contestService.AttachProblems(&contest)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
-		"contest": contest.Response(),
+		"contest": result,
 	})
 }
 
 func GetAllContests(c *gin.Context) {
-	rows, _ := DB.Queryx("select * from contest where is_deleted = 0")
-	var contests []map[string]interface{}
-	for rows.Next() {
-		var contest model.Contest
-		rows.StructScan(&contest)
-		contests = append(contests, contest.ListItemResponse())
-	}
+	var contests []entity.Contest
+	ORM.Model(entity.Contest{}).Order("id desc").Find(&contests)
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "数据获取成功",
 		"contests": contests,
@@ -75,24 +58,27 @@ func StoreContest(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	contest := model.Contest{
+	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
+	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
+	contest := entity.Contest{
 		Name:        req.Name,
-		StartTime:   req.StartTime,
-		EndTime:     req.EndTime,
-		Description: model.NullString{sql.NullString{req.Description, true}},
+		StartTime:   startTime,
+		EndTime:     endTime,
+		Description: null.StringFrom(req.Description),
 		LangMask:    req.LangMask,
 		Private:     req.Private,
 		TeamMode:    req.TeamMode,
-		UserId:      user.Id,
+		CreatorId:   user.Id,
 	}
-	err = contest.Save()
-	// 处理竞赛作业包含的问题
-	contest.AddProblems(req.Problems)
-	if utils.CheckError(c, err, "新建竞赛&作业失败，该竞赛&作业已存在") != nil {
+	err = ORM.Create(&contest).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
+	// 处理竞赛作业包含的问题
+	contestService.AddProblems(&contest, req.Problems)
+
 	idStr := strconv.Itoa(user.Id)
-	contestIdStr := strconv.Itoa(contest.Id)
+	contestIdStr := strconv.Itoa(contest.ID)
 	if user.Role != "admin" {
 		enforcer := model.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr, "PUT")
@@ -109,7 +95,6 @@ func StoreContest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "新建竞赛&作业成功",
 		"show":    true,
-		"contest": contest,
 	})
 }
 
@@ -120,23 +105,24 @@ func UpdateContest(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	contest := model.Contest{
-		Id:          id,
+	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
+	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
+	contest := entity.Contest{
+		ID:          id,
 		Name:        req.Name,
-		StartTime:   req.StartTime,
-		EndTime:     req.EndTime,
-		Description: model.NullString{sql.NullString{req.Description, true}},
+		StartTime:   startTime,
+		EndTime:     endTime,
+		Description: null.StringFrom(req.Description),
 		LangMask:    req.LangMask,
 		Private:     req.Private,
 		TeamMode:    req.TeamMode,
 	}
-	err = contest.Update()
+	err = ORM.Debug().Model(&contest).Updates(contest).Error
 	if utils.CheckError(c, err, "编辑竞赛&作业失败，竞赛&作业不存在") != nil {
 		return
 	}
 	// 处理题目列表
-	contest.RemoveProblems()
-	contest.AddProblems(req.Problems)
+	contestService.ReplaceProblems(&contest, req.Problems)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "编辑竞赛&作业成功",
 		"show":    true,
@@ -146,13 +132,10 @@ func UpdateContest(c *gin.Context) {
 
 func DeleteContest(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	contest := model.Contest{
-		Id: id,
+	contest := entity.Contest{
+		ID: id,
 	}
-	err := contest.Delete()
-	if utils.CheckError(c, err, "删除竞赛&作业失败，竞赛&作业不存在") != nil {
-		return
-	}
+	ORM.Delete(&contest)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除竞赛&作业成功",
 		"show":    true,
@@ -161,13 +144,10 @@ func DeleteContest(c *gin.Context) {
 
 func ToggleContestStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	contest := model.Contest{
-		Id: id,
+	contest := entity.Contest{
+		ID: id,
 	}
-	err := contest.ToggleStatus()
-	if utils.CheckError(c, err, "更改竞赛&作业状态失败，竞赛&作业不存在") != nil {
-		return
-	}
+	ORM.Model(&contest).Update("defunct", gorm.Expr("not defunct"))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改竞赛&作业状态成功",
 		"show":    true,
@@ -176,54 +156,32 @@ func ToggleContestStatus(c *gin.Context) {
 
 // 处理个人赛人员列表
 func IndexContestUser(c *gin.Context) {
-	param := c.Query("param")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-	whereString := "where contest_user.contest_id=" + c.Param("id")
-	if len(param) > 0 {
-		whereString += " and user.username like '%" + param + "%' or user.nick like '%" + param + "%'"
-	}
-	whereString += " order by user.id desc"
-	rows, total, err := model.Paginate(&page, &perpage,
-		"contest_user inner join user on contest_user.user_id = user.id",
-		[]string{"user.*"}, whereString)
-	if utils.CheckError(c, err, "数据获取失败") != nil {
-		return
-	}
-	users := []model.User{}
-	for rows.Next() {
-		var user model.User
-		rows.StructScan(&user)
-		users = append(users, user)
-	}
+	contestId, _ := strconv.Atoi(c.Param("id"))
+
+	contest := entity.Contest{ID: contestId}
+	users, total := contestService.Users(&contest, c)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    page,
-		"perpage": perpage,
+		"page":    c.DefaultQuery("page", "1"),
+		"perpage": c.DefaultQuery("perpage", "20"),
 		"data":    users,
 	})
 }
 
 func AddContestUsers(c *gin.Context) {
-	var temp int
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req struct {
 		UserList string `json:"userlist" binding:"required"`
 	}
 	c.ShouldBindJSON(&req)
+	contest := entity.Contest{ID: id}
 	// 检查竞赛是否存在
-	DB.Get(&temp, "select count(1) from contest where id = ? and is_deleted = 0", id)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "竞赛&作业不存在",
-		})
+	err := ORM.First(&contest).Error
+	if err := utils.CheckError(c, err, ""); err != nil {
 		return
 	}
-	contest := model.Contest{
-		Id: id,
-	}
-	infos := contest.AddUsers(req.UserList, 0)
+	infos := contestService.AddUsers(&contest, req.UserList, 0)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
 		"show":    true,
@@ -234,7 +192,11 @@ func AddContestUsers(c *gin.Context) {
 func DeleteContestUser(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	userId, _ := strconv.Atoi(c.Param("userid"))
-	DB.Exec("delete from contest_user where contest_id = ? and user_id = ?", id, userId)
+
+	contest := entity.Contest{ID: id}
+	user := entity.User{ID: userId}
+	contestService.DeleteUser(&contest, &user)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除竞赛&作业人员成功",
 		"show":    true,

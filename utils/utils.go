@@ -108,7 +108,7 @@ func CheckError(c *gin.Context, err error, msg string) error {
 	if err != nil {
 		Consolelog(err.Error())
 		var message string
-		if msg == "" {
+		if msg != "" {
 			message = msg
 		} else {
 			message = err.Error()

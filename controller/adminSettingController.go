@@ -13,8 +13,8 @@ func GetSettings(c *gin.Context) {
 
 	var config = make(map[string]interface{})
 	var enableIssueString string
-	err := DB.Get(&enableIssueString, "select value from config where item = 'enable_issue'")
-	if utils.CheckError(c, err, "数据库配置错误") != nil {
+	err := ORM.Raw("select value from config where item = 'enable_issue'").Scan(&enableIssueString).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 
@@ -41,8 +41,8 @@ func SetSettings(c *gin.Context) {
 	} else {
 		enableIssueString = "false"
 	}
-	_, err := DB.Exec("update config set value = ? where item = 'enable_issue'", enableIssueString)
-	if utils.CheckError(c, err, "数据库操作错误") != nil {
+	err := ORM.Exec("update config set value = ? where item = 'enable_issue'", enableIssueString).Error
+	if utils.CheckError(c, err, "") != nil {
 		return
 	}
 	if enableIssueString == "true" {
@@ -53,6 +53,7 @@ func SetSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "修改系统配置项成功",
 		"config":  config,
+		"show":    true,
 	})
 }
 
