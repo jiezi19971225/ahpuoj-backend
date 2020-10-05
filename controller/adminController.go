@@ -1,21 +1,22 @@
 package controller
 
 import (
-	"net/http"
-
+	"ahpuoj/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
+	"log"
+	"net/http"
 )
 
 func GetSubmitStatistic(c *gin.Context) {
-	var rows *sqlx.Rows
 	// 这还是一段神奇的SQL 获得15天内累计提交的变化
+
 	type StatisticUnit struct {
-		Date  string `db:"date",json:"date"`
-		Count int    `db:"count",json:"count"`
+		Date  utils.JSONDate `json:"date"`
+		Count int            `json:"count"`
 	}
-	var recentSubmitStatistic = make([][]interface{}, 0)
-	rows, _ = DB.Queryx(`
+
+	var results []StatisticUnit
+	ORM.Raw(`
 	select  dualdate.date,count(*) count from 
 	(select * from solution) s 
 	right join  
@@ -23,19 +24,10 @@ func GetSubmitStatistic(c *gin.Context) {
 	from mysql.help_topic
 	where help_topic_id  <= 14)  dualdate 
 	on date(s.in_date) <= dualdate.date 
-	group by dualdate.date order by dualdate.date asc`)
-
-	for rows.Next() {
-		var unit StatisticUnit
-		rows.StructScan(&unit)
-		recentSubmitStatistic = append(recentSubmitStatistic, []interface{}{
-			unit.Date,
-			unit.Count,
-		})
-	}
-
+	group by dualdate.date order by dualdate.date asc`).Scan(&results)
+	log.Println(results)
 	c.JSON(http.StatusOK, gin.H{
 		"message":                 "获取个人信息成功",
-		"recent_submit_statistic": recentSubmitStatistic,
+		"recent_submit_statistic": results,
 	})
 }
