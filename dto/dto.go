@@ -25,3 +25,13 @@ type ContestDetailDto struct {
 	entity.Contest
 	Problems string `json:"problems"`
 }
+
+type RejudgeInfo struct {
+	UserId      int    `db:"user_id"`
+	SolutionId  int    `db:"solution_id"`
+	ProblemId   int    `db:"problem_id"`
+	Language    int    `db:"language"`
+	TimeLimit   int    `db:"time_limit"`
+	MemoryLimit int    `db:"memory_limit"`
+	Source      string `db:"source"`
+}

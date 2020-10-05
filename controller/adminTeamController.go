@@ -15,8 +15,8 @@ func GetTeam(c *gin.Context) {
 	var team model.Team
 	id, _ := strconv.Atoi(c.Param("id"))
 	err := ORM.Model(entity.Team{}).First(&team, id).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
@@ -50,7 +50,7 @@ func IndexTeamUser(c *gin.Context) {
 	teamId, _ := strconv.Atoi(c.Param("id"))
 
 	team := entity.Team{ID: teamId}
-	users, total := teamService.Users(team, c)
+	users, total := teamService.Users(&team, c)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
@@ -68,8 +68,8 @@ func AddTeamUsers(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	c.ShouldBindJSON(&req)
 	var team entity.Team
-	ORM.Debug().First(&team, id)
-	infos := teamService.AddUsers(team, req.UserList)
+	ORM.First(&team, id)
+	infos := teamService.AddUsers(&team, req.UserList)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
 		"show":    true,
@@ -81,8 +81,8 @@ func StoreTeam(c *gin.Context) {
 	var req request.Team
 	user, _ := GetUserInstance(c)
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	team := entity.Team{
 		Name:      req.Name,
@@ -113,16 +113,16 @@ func UpdateTeam(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req request.Team
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	team := entity.Team{
 		ID:   id,
 		Name: req.Name,
 	}
 	err = ORM.Model(&team).Updates(team).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "编辑团队成功",
@@ -134,8 +134,8 @@ func UpdateTeam(c *gin.Context) {
 func DeleteTeam(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	err := ORM.Delete(entity.Team{}, id).Error
-	if utils.CheckError(c, err, "删除团队失败，团队不存在") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除团队成功",
@@ -146,7 +146,7 @@ func DeleteTeam(c *gin.Context) {
 func DeleteTeamUser(c *gin.Context) {
 	teamId, _ := strconv.Atoi(c.Param("id"))
 	userId, _ := strconv.Atoi(c.Param("userid"))
-	teamService.DeleteUser(entity.Team{ID: teamId}, entity.User{ID: userId})
+	teamService.DeleteUser(&entity.Team{ID: teamId}, entity.User{ID: userId})
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除团队成员成功",
 		"show":    true,

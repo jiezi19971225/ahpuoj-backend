@@ -27,26 +27,26 @@ func (this *TeamService) List(c *gin.Context) ([]dto.TeamDto, int64) {
 	query.Count(&total)
 
 	results := []dto.TeamDto{}
-	query.Debug().Scopes(utils.Paginate(c)).Order("team.id desc").Select("team.*", "user.username").Joins("inner join user on team.user_id = user.id").Find(&results)
+	query.Scopes(utils.Paginate(c)).Order("team.id desc").Select("team.*", "user.username").Joins("inner join user on team.user_id = user.id").Find(&results)
 	return results, total
 }
 
-func (this *TeamService) Users(team entity.Team, c *gin.Context) ([]entity.User, int64) {
-	query := this.Model(&team)
+func (this *TeamService) Users(team *entity.Team, c *gin.Context) ([]entity.User, int64) {
+	query := this.Model(team)
 	param := c.Query("param")
 
 	if len(param) > 0 {
 		query.Where("username like ?", "%"+param+"%")
 	}
 
-	total := query.Debug().Association("Users").Count()
+	total := query.Association("Users").Count()
 
 	var users []entity.User
-	query.Debug().Scopes(utils.Paginate(c)).Order("user.id desc").Association("Users").Find(&users)
+	query.Scopes(utils.Paginate(c)).Order("user.id desc").Association("Users").Find(&users)
 	return users, total
 }
 
-func (this *TeamService) AddUsers(team entity.Team, userlist string) []string {
+func (this *TeamService) AddUsers(team *entity.Team, userlist string) []string {
 	var infos []string
 	var users []entity.User
 	pieces := strings.Split(userlist, "\n")
@@ -55,12 +55,12 @@ func (this *TeamService) AddUsers(team entity.Team, userlist string) []string {
 			var count int64
 			var info string
 			var user entity.User
-			err := this.Debug().Model(entity.User{}).Where("username = ?", username).Take(&user).Error
+			err := this.Model(entity.User{}).Where("username = ?", username).Take(&user).Error
 			// 用户不存在不可以插入
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				info = "团队添加用户" + username + "失败，用户不存在"
 			} else {
-				this.Debug().Model(model.TeamUser{}).Where("team_id = ? and user_id = ?", team.ID, user.ID).Count(&count)
+				this.Model(model.TeamUser{}).Where("team_id = ? and user_id = ?", team.ID, user.ID).Count(&count)
 				if count != 0 {
 					info = "团队添加用户" + username + "失败，用户不存在"
 				} else {
@@ -68,7 +68,7 @@ func (this *TeamService) AddUsers(team entity.Team, userlist string) []string {
 					if err != nil {
 						log.Print(err, "Error", err.Error())
 					}
-					this.Debug().Create(&entity.TeamUser{
+					this.Create(&entity.TeamUser{
 						TeamID: team.ID,
 						UserID: user.ID,
 					})
@@ -81,8 +81,8 @@ func (this *TeamService) AddUsers(team entity.Team, userlist string) []string {
 	return infos
 }
 
-func (this *TeamService) DeleteUser(team entity.Team, user entity.User) {
-	this.Debug().Model(team).Association("Users").Delete(&user)
+func (this *TeamService) DeleteUser(team *entity.Team, user entity.User) {
+	this.Model(team).Association("Users").Delete(&user)
 	// 级联删除
 	// DB.Exec(`delete contest_user from contest_user inner join contest_team_user on contest_user.contest_id = contest_team_user.contest_id
 	// where contest_user.user_id = ? and contest_team_user.team_id = ?`, userId, teamId)

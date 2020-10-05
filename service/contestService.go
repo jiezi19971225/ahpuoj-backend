@@ -24,9 +24,9 @@ func (this *ContestService) List(c *gin.Context) ([]dto.ContestDto, int64) {
 		query.Where("name like ?", "%"+param+"%")
 	}
 	var total int64
-	query.Debug().Count(&total)
+	query.Count(&total)
 	var results []dto.ContestDto
-	query.Debug().Scopes(utils.Paginate(c)).Order("contest.id desc").Select("contest.*", "user.username").Joins("inner join user on contest.user_id = user.id").Find(&results)
+	query.Scopes(utils.Paginate(c)).Order("contest.id desc").Select("contest.*", "user.username").Joins("inner join user on contest.user_id = user.id").Find(&results)
 
 	return results, total
 }
@@ -37,7 +37,7 @@ func (this *ContestService) AttachProblems(contest *entity.Contest) dto.ContestD
 		ID string
 	}
 	var res []result
-	this.Debug().Model(contest).Select("problem.id").Association("Problems").Find(&res)
+	this.Model(contest).Select("problem.id").Association("Problems").Find(&res)
 
 	for _, r := range res {
 		problemIds = append(problemIds, r.ID)
@@ -61,7 +61,7 @@ func (this *ContestService) AddProblems(contest *entity.Contest, reqProblems str
 			}
 			err := this.Model(entity.Problem{}).First(&problem).Error
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
-				this.Debug().Create(&entity.ContestProblem{
+				this.Create(&entity.ContestProblem{
 					ContestID: contest.ID,
 					ProblemID: problemId,
 					Num:       cnt,
@@ -85,10 +85,10 @@ func (this *ContestService) Users(contest *entity.Contest, c *gin.Context) ([]en
 		query.Where("username like ? or nike like ?", "%"+param+"%", "%"+param+"%")
 	}
 
-	total := query.Debug().Association("Users").Count()
+	total := query.Association("Users").Count()
 
 	var users []entity.User
-	query.Debug().Scopes(utils.Paginate(c)).Select("user.*").Order("user.id desc").Association("Users").Find(&users)
+	query.Scopes(utils.Paginate(c)).Select("user.*").Order("user.id desc").Association("Users").Find(&users)
 	return users, total
 }
 
@@ -103,14 +103,14 @@ func (this *ContestService) AddUsers(contest *entity.Contest, userlist string, t
 		for _, username := range pieces {
 			var count int64
 			var user entity.User
-			err := this.Debug().Model(entity.User{}).Where("username = ?", username).Take(&user).Error
+			err := this.Model(entity.User{}).Where("username = ?", username).Take(&user).Error
 			// 用户不存在不可以插入
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				infos = append(infos, "竞赛&作业添加用户"+username+"失败，用户不存在")
 				continue
 			}
 
-			this.Debug().Model(entity.ContestUser{}).Where("contest_id = ? and user_id = ?", contest.ID, user.ID).Count(&count)
+			this.Model(entity.ContestUser{}).Where("contest_id = ? and user_id = ?", contest.ID, user.ID).Count(&count)
 			// 判断是否已经添加了用户进入竞赛作业中
 			if count != 0 {
 				infos = append(infos, "竞赛&作业添加用户"+username+"失败，用户不存在")
@@ -119,7 +119,7 @@ func (this *ContestService) AddUsers(contest *entity.Contest, userlist string, t
 
 			// 判断用户是否属于团队
 			if teamId > 0 {
-				this.Debug().Model(entity.TeamUser{}).Where("team_id = ? and user_id = ?", teamId, user.ID).Count(&count)
+				this.Model(entity.TeamUser{}).Where("team_id = ? and user_id = ?", teamId, user.ID).Count(&count)
 				if count == 0 {
 					infos = append(infos, "竞赛&作业添加用户"+username+"失败，用户不属于该团队")
 					continue
@@ -128,7 +128,7 @@ func (this *ContestService) AddUsers(contest *entity.Contest, userlist string, t
 			if err != nil {
 				log.Print(err, "Error", err.Error())
 			}
-			this.Debug().Create(&entity.ContestUser{
+			this.Create(&entity.ContestUser{
 				ContestID: contest.ID,
 				TeamID:    teamId,
 				UserID:    user.ID,
@@ -144,5 +144,5 @@ func (this *ContestService) AddTeam(contest *entity.Contest, team *entity.Team) 
 }
 
 func (this *ContestService) DeleteUser(contest *entity.Contest, user *entity.User) {
-	this.Debug().Model(contest).Association("Users").Delete(user)
+	this.Model(contest).Association("Users").Delete(user)
 }

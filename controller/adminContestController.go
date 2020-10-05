@@ -117,7 +117,7 @@ func UpdateContest(c *gin.Context) {
 		Private:     req.Private,
 		TeamMode:    req.TeamMode,
 	}
-	err = ORM.Debug().Model(&contest).Updates(contest).Error
+	err = ORM.Model(&contest).Updates(contest).Error
 	if utils.CheckError(c, err, "编辑竞赛&作业失败，竞赛&作业不存在") != nil {
 		return
 	}

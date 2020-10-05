@@ -3,7 +3,6 @@ package controller
 import (
 	"ahpuoj/entity"
 	"ahpuoj/request"
-	"ahpuoj/utils"
 	"net/http"
 	"strconv"
 
@@ -35,16 +34,16 @@ func GetAllTags(c *gin.Context) {
 func StoreTag(c *gin.Context) {
 	var req request.Tag
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	tag := entity.Tag{
 		Name: req.Name,
 	}
 
 	err = ORM.Create(&tag).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -58,16 +57,16 @@ func UpdateTag(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req request.Tag
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	tag := entity.Tag{
 		ID:   id,
 		Name: req.Name,
 	}
 	err = ORM.Model(&tag).Updates(tag).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -82,7 +81,7 @@ func DeleteTag(c *gin.Context) {
 	tag := entity.Tag{
 		ID: id,
 	}
-	tagService.Delete(&tag)
+	tagService.DeleteRecord(&tag)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除标签成功",
 		"show":    true,

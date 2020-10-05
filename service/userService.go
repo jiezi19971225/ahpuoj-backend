@@ -23,6 +23,6 @@ func (this *UserService) List(c *gin.Context) ([]entity.User, int64) {
 	var total int64
 	query.Count(&total)
 	var results []entity.User
-	query.Debug().Scopes(utils.Paginate(c)).Order("id desc").Find(&results)
+	query.Scopes(utils.Paginate(c)).Order("id desc").Find(&results)
 	return results, total
 }

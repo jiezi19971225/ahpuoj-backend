@@ -13,6 +13,9 @@ func handelRouterGroup() {
 
 func InitRouter() *gin.Engine {
 	router := gin.Default()
+	// 全局错误处理中间件
+	router.Use(middleware.ErrHandlerMiddleware())
+
 	router.POST("/api/login", controller.Login)
 	router.POST("/api/register", controller.Register)
 	router.POST("/api/findpass", controller.SendFindPassEmail)

@@ -11,8 +11,11 @@ type TagService struct {
 	*gorm.DB
 }
 
-func (this *TagService) Delete(tag *entity.Tag) {
-	this.Delete(tag)
+func (this *TagService) DeleteRecord(tag *entity.Tag) {
+	err := this.Delete(tag).Error
+	if err != nil {
+		panic(err)
+	}
 	//if err != nil {
 	//	return err
 	//}
@@ -33,6 +36,6 @@ func (this *TagService) List(c *gin.Context) ([]entity.Tag, int64) {
 	var total int64
 	query.Count(&total)
 	var results []entity.Tag
-	query.Debug().Scopes(utils.Paginate(c)).Order("id desc").Find(&results)
+	query.Scopes(utils.Paginate(c)).Order("id desc").Find(&results)
 	return results, total
 }
