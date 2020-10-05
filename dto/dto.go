@@ -40,3 +40,8 @@ type RejudgeInfo struct {
 	MemoryLimit int
 	Source      string
 }
+
+type ContestTeamDto struct {
+	entity.Team
+	Userinfos []entity.User `json:"userinfos"`
+}

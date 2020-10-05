@@ -22,6 +22,7 @@ type Contest struct {
 	CreatorId   int            `gorm:"column:user_id;" json:"creator_id"`
 	Problems    []Problem      `gorm:"many2many:contest_problem;" json:"problems"`
 	Users       []User         `gorm:"many2many:contest_user;" json:"users"`
+	Teams       []Team         `gorm:"many2many:contest_team;" json:"teams"`
 }
 
 func (Contest) TableName() string {

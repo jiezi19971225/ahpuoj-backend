@@ -17,13 +17,15 @@ import (
 
 func IndexContest(c *gin.Context) {
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	results, total := contestService.List(c)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    c.DefaultQuery("page", "1"),
-		"perpage": c.DefaultQuery("perpage", "20"),
+		"page":    page,
+		"perpage": perpage,
 		"data":    results,
 	})
 }
@@ -162,15 +164,18 @@ func ToggleContestStatus(c *gin.Context) {
 
 // 处理个人赛人员列表
 func IndexContestUser(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	contestId, _ := strconv.Atoi(c.Param("id"))
 
 	contest := entity.Contest{ID: contestId}
 	users, total := contestService.Users(&contest, c)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    c.DefaultQuery("page", "1"),
-		"perpage": c.DefaultQuery("perpage", "20"),
+		"page":    page,
+		"perpage": perpage,
 		"data":    users,
 	})
 }
@@ -190,7 +195,6 @@ func AddContestUsers(c *gin.Context) {
 	infos := contestService.AddUsers(&contest, req.UserList, 0)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
-		"show":    true,
 		"info":    infos,
 	})
 }
@@ -209,56 +213,24 @@ func DeleteContestUser(c *gin.Context) {
 	})
 }
 
-// 处理团队赛管理
+// ! 处理团队赛管理
 func IndexContestTeamWithUser(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	rows, _ := DB.Queryx("select team.* from contest_team inner join team on contest_team.team_id = team.id where contest_team.contest_id = ?", id)
-	teams := []model.Team{}
-	for rows.Next() {
-		var team model.Team
-		rows.StructScan(&team)
-		team.AttachUserInfo(id)
-		teams = append(teams, team)
-	}
+	contest := entity.Contest{ID: id}
+	results := contestService.TeamList(&contest)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
-		"data":    teams,
+		"data":    results,
 	})
 }
 
 func AddContestTeam(c *gin.Context) {
-	var err error
-	var temp int
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
 	// 检查竞赛是否存在
-	DB.Get(&temp, "select count(1) from contest where id = ? and is_deleted = 0", id)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "竞赛&作业不存在",
-		})
-		return
-	}
-	// 检查团队是否存在
-	DB.Get(&temp, "select count(1) from team where id = ? and is_deleted = 0", teamId)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "团队不存在",
-		})
-		return
-	}
-	// 检查是否已经添加进了竞赛作业中
-	DB.Get(&temp, "select count(1) from contest_team where contest_id = ? and team_id = ? ", id, teamId)
-	if temp > 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "该团队已经在该竞赛作业中",
-		})
-		return
-	}
-	_, err = DB.Exec("insert into contest_team(contest_id,team_id,created_at,updated_at) values(?,?,NOW(),NOW())", id, teamId)
-	if utils.CheckError(c, err, "数据库操作失败") != nil {
-		return
-	}
+	contest := entity.Contest{ID: id}
+	team := entity.Team{ID: teamId}
+	contestService.AddTeam(&contest, &team)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "添加团队成功",
 		"show":    true,
@@ -268,11 +240,9 @@ func AddContestTeam(c *gin.Context) {
 func DeleteContestTeam(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
-	DB.Exec("delete from contest_team where contest_id = ? and team_id = ?", id, teamId)
-	// 级联删除
-	DB.Exec(`delete contest_user from contest_user inner join contest_team_user on contest_user.contest_id = contest_team_user.contest_id 
-	where contest_user.contest_id = ? and contest_team_user.team_id = ?`, id, teamId)
-	DB.Exec("delete from contest_team_user where contest_id = ? and team_id = ?", id, teamId)
+	contest := entity.Contest{ID: id}
+	team := entity.Team{ID: teamId}
+	contestService.DeleteTeam(&contest, &team)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除团队成功",
@@ -284,10 +254,10 @@ func DeleteContestTeamUser(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
 	userId, _ := strconv.Atoi(c.Param("userid"))
-	DB.Exec(`delete contest_user from contest_user inner join contest_team_user on contest_user.contest_id = contest_team_user.contest_id 
-	where contest_user.contest_id = ? and contest_user.user_id = ? and contest_team_user.team_id = ?`, id, userId, teamId)
-	// 级联删除
-	DB.Exec("delete from contest_team_user where contest_id = ? and team_id = ? and user_id = ?", id, teamId, userId)
+	contest := entity.Contest{ID: id}
+	team := entity.Team{ID: teamId}
+	user := entity.User{ID: userId}
+	contestService.DeleteTeamUser(&contest, &team, &user)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除团队人员成功",
 		"show":    true,
@@ -298,96 +268,46 @@ func AddContestTeamUsers(c *gin.Context) {
 	var req struct {
 		UserList string `json:"userlist" binding:"required"`
 	}
-	var temp int
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
 	c.ShouldBindJSON(&req)
 
+	contest := entity.Contest{ID: id}
+	team := entity.Team{ID: teamId}
+
 	// 检查竞赛是否存在
-	DB.Get(&temp, "select count(1) from contest where id = ? and is_deleted = 0", id)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "竞赛&作业不存在",
-		})
-		return
+	err := ORM.First(&contest).Error
+	if err != nil {
+		panic(err)
 	}
-
 	// 检查团队是否存在
-	DB.Get(&temp, "select count(1) from team where id = ? and is_deleted = 0", teamId)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "团队不存在",
-		})
-		return
+	err = ORM.First(&team).Error
+	if err != nil {
+		panic(err)
 	}
 
-	contest := model.Contest{
-		Id: id,
-	}
-	infos := contest.AddUsers(req.UserList, teamId)
+	infos := contestService.AddUsers(&contest, req.UserList, team.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
-		"show":    true,
 		"info":    infos,
 	})
 }
 
 func AddContestTeamAllUsers(c *gin.Context) {
-	var err error
-	var temp int
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
 	// 检查竞赛是否存在
-	DB.Get(&temp, "select count(1) from contest where id = ? and is_deleted = 0", id)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "竞赛&作业不存在",
-		})
-		return
-	}
-	// 检查团队是否存在
-	DB.Get(&temp, "select count(1) from team where id = ? and is_deleted = 0", teamId)
-	if temp == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "团队不存在",
-		})
-		return
-	}
-	var infos []string
-	rows, err := DB.Queryx("select user.* from user inner join team_user on user.id = team_user.user_id where team_user.team_id = ?", teamId)
-	checkHasUserStmt, _ := DB.Preparex("select 1 from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?")
-	insertStmt, _ := DB.Preparex("insert into contest_user(contest_id,user_id,created_at,updated_at) VALUES (?,?,NOW(),NOW())")
-	insertToTeamStmt, _ := DB.Preparex("insert into contest_team_user(contest_id,team_id,user_id,created_at,updated_at) VALUES (?,?,?,NOW(),NOW())")
-	for rows.Next() {
-		var user model.User
-		var info string
-		rows.StructScan(&user)
-		utils.Consolelog(user)
-		err = checkHasUserStmt.Get(&temp, id, user.Id)
-		// 有记录返回err==nil
-		if err == nil {
-			info = "竞赛&作业添加用户" + user.Username + "失败，用户已被添加"
-		} else {
-			insertStmt.Exec(id, user.Id)
-			insertToTeamStmt.Exec(id, teamId, user.Id)
-			info = "竞赛&作业添加用户" + user.Username + "成功"
-		}
-		infos = append(infos, info)
-	}
-	insertStmt.Close()
-	insertToTeamStmt.Close()
-	checkHasUserStmt.Close()
+	contest := entity.Contest{ID: id}
+	team := entity.Team{ID: teamId}
+	infos := contestService.AddTeamAllUsers(&contest, &team)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
-		"show":    true,
 		"info":    infos,
 	})
 
 }
 
 func GetContestProblemSolutions(c *gin.Context) {
-	//var err error
-	//var temp int
 	id, _ := strconv.Atoi(c.Param("id"))
 	problemId, _ := strconv.Atoi(c.Param("problemid"))
 	type SolutionWithName struct {
@@ -397,11 +317,11 @@ func GetContestProblemSolutions(c *gin.Context) {
 		Language   int    `db:"language" json:"language"`
 	}
 	var SolutionWithNameList []SolutionWithName
-	DB.Select(&SolutionWithNameList, "select source_code.solution_id,source_code.source,username,language from solution "+
+	ORM.Raw("select source_code.solution_id,source_code.source,username,language from solution "+
 		"INNER JOIN source_code on solution.solution_id = source_code.solution_id "+
 		"INNER JOIN user on solution.user_id = user.id "+
 		"where contest_id = ? and num = ? and result = 4 "+
-		" order by username desc,solution_id desc;", id, problemId)
+		" order by username desc,solution_id desc;", id, problemId).Scan(&SolutionWithNameList)
 
 	buf := new(bytes.Buffer)
 	// 实例化新的 zip.Writer

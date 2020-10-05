@@ -11,13 +11,14 @@ import (
 
 func IndexTag(c *gin.Context) {
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	results, total := tagService.List(c)
-
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    c.DefaultQuery("page", "1"),
-		"perpage": c.DefaultQuery("perpage", "20"),
+		"page":    page,
+		"perpage": perpage,
 		"data":    results,
 	})
 }

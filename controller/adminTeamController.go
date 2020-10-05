@@ -26,13 +26,15 @@ func GetTeam(c *gin.Context) {
 
 func IndexTeam(c *gin.Context) {
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	results, total := teamService.List(c)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    c.DefaultQuery("page", "1"),
-		"perpage": c.DefaultQuery("perpage", "20"),
+		"page":    page,
+		"perpage": perpage,
 		"data":    results,
 	})
 }
@@ -47,6 +49,9 @@ func GetAllTeams(c *gin.Context) {
 }
 
 func IndexTeamUser(c *gin.Context) {
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	teamId, _ := strconv.Atoi(c.Param("id"))
 
 	team := entity.Team{ID: teamId}
@@ -55,8 +60,8 @@ func IndexTeamUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"total":   total,
-		"page":    c.DefaultQuery("page", "1"),
-		"perpage": c.DefaultQuery("perpage", "20"),
+		"page":    page,
+		"perpage": perpage,
 		"data":    users,
 	})
 }

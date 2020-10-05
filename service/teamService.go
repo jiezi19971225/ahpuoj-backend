@@ -39,10 +39,13 @@ func (this *TeamService) Users(team *entity.Team, c *gin.Context) ([]entity.User
 		query.Where("username like ?", "%"+param+"%")
 	}
 
-	total := query.Association("Users").Count()
+	total := query.Session(&gorm.Session{WithConditions: true}).Association("Users").Count()
 
 	var users []entity.User
-	query.Scopes(utils.Paginate(c)).Order("user.id desc").Association("Users").Find(&users)
+	err := query.Scopes(utils.Paginate(c)).Select("user.*").Order("user.id desc").Association("Users").Find(&users)
+	if err != nil {
+		panic(err)
+	}
 	return users, total
 }
 
