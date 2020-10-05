@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"ahpuoj/model"
+	"ahpuoj/dto"
+	"ahpuoj/entity"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"errors"
@@ -10,22 +11,23 @@ import (
 )
 
 func GetRoleList(c *gin.Context) {
-	type role struct {
-		Id          int    `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
+	roles := []entity.Role{}
+	err := ORM.Model(entity.Role{}).Where("id != 1").Find(&roles).Error
+	if err != nil {
+		panic(err)
 	}
-	rolelist := []role{}
-	DB.Unsafe().Select(&rolelist, "select * from role where name != 'user' and name != 'admin'")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
-		"data":    rolelist,
+		"data":    roles,
 	})
 }
 
 func GetAdminList(c *gin.Context) {
-	adminList := []model.User{}
-	DB.Unsafe().Select(&adminList, "select user.*,role.name as role from user inner join role on user.role_id = role.id where user.role_id != 1")
+	adminList := []dto.UserWithRoleDto{}
+	err := ORM.Model(entity.User{}).Select("user.*,role.name as role").Joins("inner join role on user.role_id = role.id").Where("user.role_id != 1").Find(&adminList).Error
+	if err != nil {
+		panic(err)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
 		"data":    adminList,
@@ -36,24 +38,27 @@ func AssignRole(c *gin.Context) {
 	var req request.AssignRole
 	err := c.ShouldBindJSON(&req)
 	// TODO 先粗略处理 无法授予超级管理员角色
-	msg := "请求参数错误"
+	if err != nil {
+		panic(err)
+	}
 	if req.RoleId == 2 {
-		err = errors.New("无法授予超级管理员角色")
-		msg = "无法授予超级管理员角色"
+		panic(errors.New("无法授予超级管理员角色"))
 	}
-	if utils.CheckError(c, err, msg) != nil {
-		return
+
+	user := entity.User{}
+	err = ORM.Model(entity.User{}).Where("username = ?", req.UserName).Take(&user).Error
+	if err != nil {
+		panic(err)
 	}
-	var temp int
-	err = DB.Get(&temp, "select 1 from user where  username = ?", req.UserName)
-	if utils.CheckError(c, err, "用户不存在") != nil {
-		return
+	role := entity.Role{ID: req.RoleId}
+	err = ORM.Model(&role).First(&role).Error
+	if err != nil {
+		panic(err)
 	}
-	err = DB.Get(&temp, "select 1 from role where id = ?", req.RoleId)
-	if utils.CheckError(c, err, "角色不存在") != nil {
-		return
+	err = ORM.Model(&user).Update("role_id", req.RoleId).Error
+	if err != nil {
+		panic(err)
 	}
-	DB.Exec("update user set role_id = ? where username = ?", req.RoleId, req.UserName)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
 		"show":    true,
@@ -66,18 +71,19 @@ func UnassignRole(c *gin.Context) {
 	if utils.CheckError(c, err, "请求参数错误") != nil {
 		return
 	}
-	var user model.User
-	err = DB.Unsafe().Get(&user, "select * from user where id = ?", req.UserId)
+	user := entity.User{ID: req.UserId}
+	err = ORM.Model(entity.User{}).First(&user).Error
+	if err != nil {
+		panic(err)
+	}
 	// TODO 先粗略处理 无法撤销超级管理员角色
-	msg := "用户不存在"
 	if user.RoleId == 2 {
-		err = errors.New("无法撤销超级管理员角色")
-		msg = "无法撤销超级管理员角色"
+		panic(errors.New("无法撤销超级管理员角色"))
 	}
-	if utils.CheckError(c, err, msg) != nil {
-		return
+	err = ORM.Model(&user).Update("role_id", 1).Error
+	if err != nil {
+		panic(err)
 	}
-	DB.Exec("update user set role_id = 1 where id = ?", req.UserId)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "操作成功",
 		"show":    true,

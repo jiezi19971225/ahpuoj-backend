@@ -45,3 +45,8 @@ type ContestTeamDto struct {
 	entity.Team
 	Userinfos []entity.User `json:"userinfos"`
 }
+
+type UserWithRoleDto struct {
+	entity.User
+	Role string `json:"role"`
+}
