@@ -26,12 +26,17 @@ type ContestDetailDto struct {
 	Problems string `json:"problems"`
 }
 
+type UserWithPasswordDto struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type RejudgeInfo struct {
-	UserId      int    `db:"user_id"`
-	SolutionId  int    `db:"solution_id"`
-	ProblemId   int    `db:"problem_id"`
-	Language    int    `db:"language"`
-	TimeLimit   int    `db:"time_limit"`
-	MemoryLimit int    `db:"memory_limit"`
-	Source      string `db:"source"`
+	UserId      int
+	SolutionId  int
+	ProblemId   int
+	Language    int
+	TimeLimit   int
+	MemoryLimit int
+	Source      string
 }

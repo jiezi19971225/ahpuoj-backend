@@ -32,8 +32,8 @@ func ShowContest(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	contest := entity.Contest{}
 	err := ORM.First(&contest, id).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	result := contestService.AttachProblems(&contest)
 	c.JSON(http.StatusOK, gin.H{
@@ -55,8 +55,8 @@ func StoreContest(c *gin.Context) {
 	var req request.Contest
 	user, _ := GetUserInstance(c)
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
 	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
@@ -71,8 +71,8 @@ func StoreContest(c *gin.Context) {
 		CreatorId:   user.Id,
 	}
 	err = ORM.Create(&contest).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	// 处理竞赛作业包含的问题
 	contestService.AddProblems(&contest, req.Problems)
@@ -102,8 +102,8 @@ func UpdateContest(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req request.Contest
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "请求参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
 	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
@@ -118,8 +118,8 @@ func UpdateContest(c *gin.Context) {
 		TeamMode:    req.TeamMode,
 	}
 	err = ORM.Model(&contest).Updates(contest).Error
-	if utils.CheckError(c, err, "编辑竞赛&作业失败，竞赛&作业不存在") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	// 处理题目列表
 	contestService.ReplaceProblems(&contest, req.Problems)
@@ -135,7 +135,10 @@ func DeleteContest(c *gin.Context) {
 	contest := entity.Contest{
 		ID: id,
 	}
-	ORM.Delete(&contest)
+	err := ORM.Delete(&contest).Error
+	if err != nil {
+		panic(err)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除竞赛&作业成功",
 		"show":    true,
@@ -147,7 +150,10 @@ func ToggleContestStatus(c *gin.Context) {
 	contest := entity.Contest{
 		ID: id,
 	}
-	ORM.Model(&contest).Update("defunct", gorm.Expr("not defunct"))
+	err := ORM.Model(&contest).Update("defunct", gorm.Expr("not defunct")).Error
+	if err != nil {
+		panic(err)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改竞赛&作业状态成功",
 		"show":    true,
@@ -178,8 +184,8 @@ func AddContestUsers(c *gin.Context) {
 	contest := entity.Contest{ID: id}
 	// 检查竞赛是否存在
 	err := ORM.First(&contest).Error
-	if err := utils.CheckError(c, err, ""); err != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	infos := contestService.AddUsers(&contest, req.UserList, 0)
 	c.JSON(http.StatusOK, gin.H{

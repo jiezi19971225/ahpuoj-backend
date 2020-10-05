@@ -1,11 +1,12 @@
 package controller
 
 import (
-	"ahpuoj/model"
+	"ahpuoj/dto"
+	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"crypto/sha1"
-	"database/sql"
 	"fmt"
+	"gopkg.in/guregu/null.v4"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,32 +17,35 @@ import (
 func CompeteAccountGenerator(c *gin.Context) {
 	var req struct {
 		Prefix string `json:"prefix" binding:"required,max=15"`
-		Number int    `json:"number" binding:"required,min=1,max=100"`
+		Number int    `json:"number" binding:"required,min=1,max=200"`
 	}
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 	var infos []string
-	users := []model.User{}
+	users := []dto.UserWithPasswordDto{}
 	for i := 1; i <= req.Number; i++ {
 		username := req.Prefix + strconv.Itoa(i)
 		randomPassword := utils.GetRandomString(15)
 		h := sha1.New()
 		h.Write([]byte(randomPassword))
 		hashedPassword := fmt.Sprintf("%x", h.Sum(nil))
-		user := model.User{
+		user := entity.User{
 			Username:      username,
 			Nick:          username,
-			Email:         model.NullString{sql.NullString{"", false}},
+			Email:         null.StringFrom(""),
 			Password:      hashedPassword,
 			IsCompeteUser: 1,
 		}
-		err = user.Save()
+		err := ORM.Create(&user).Error
 		if err != nil {
 			infos = append(infos, "用户"+username+"创建失败")
 		} else {
-			users = append(users, user)
+			users = append(users, dto.UserWithPasswordDto{
+				Username: user.Username,
+				Password: randomPassword,
+			})
 			infos = append(infos, "用户"+username+"创建成功")
 		}
 	}
@@ -77,14 +81,14 @@ func UserAccountGenerator(c *gin.Context) {
 			h.Write([]byte(password))
 			hashedPassword := fmt.Sprintf("%x", h.Sum(nil))
 
-			user := model.User{
+			user := entity.User{
 				Username: username,
 				Nick:     username,
-				Email:    model.NullString{sql.NullString{"", false}},
+				Email:    null.StringFrom(""),
 				Password: hashedPassword,
-				PassSalt: salt,
+				Passsalt: salt,
 			}
-			err = user.Save()
+			err := ORM.Create(&user).Error
 			if err == nil {
 				users = append(users, map[string]interface{}{
 					"username": username,
