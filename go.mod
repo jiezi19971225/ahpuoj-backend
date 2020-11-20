@@ -25,8 +25,9 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/guregu/null.v4 v4.0.0
-	gorm.io/driver/mysql v1.0.1
-	gorm.io/gorm v1.20.1
+	gorm.io/driver/mysql v1.0.2
+	gorm.io/gorm v1.20.4
+	gorm.io/plugin/dbresolver v1.0.1
 	xorm.io/builder v0.3.7 // indirect
 	xorm.io/core v0.7.3 // indirect
 )

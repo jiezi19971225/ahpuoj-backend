@@ -2,6 +2,7 @@ package controller
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/entity"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"encoding/json"
@@ -31,10 +32,10 @@ func NologinGetNewList(c *gin.Context) {
 
 	var total int64
 	query.Count(&total)
-	news := []model.New{}
+	news := []entity.New{}
 	err := query.Scopes(Paginate(c)).Order("top desc,id desc").Find(&news).Error
-	if utils.CheckError(c, err, "") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -63,36 +64,36 @@ func NologinGetProblemList(c *gin.Context) {
 	if page == 0 {
 		page = 1
 	}
-	whereString := "where 1"
+	query := ORM.Model(entity.Problem{})
+
 	if len(param) > 0 {
 		_, err := strconv.Atoi(param)
 		if err != nil {
-			whereString += " and problem.title like '%" + param + "%'"
+			query.Where("problem.title like ?", "%"+param+"%")
 		} else {
-			whereString += " and problem.id =" + param
+			query.Where("problem.id =", "%"+param+"%")
 		}
 	}
 	if tagId >= 0 {
-		whereString += " and problem_tag.tag_id=" + tagIdStr
+		query.Where("problem_tag.tag_id =", tagIdStr)
 	}
 	if level >= 0 {
-		whereString += " and problem.level=" + levelStr
+		query.Where("problem_tag.tag_id =", levelStr)
 	}
 
 	// 非管理员无法查看隐藏的题目
 	if !loggedIn || (loggedIn && user.Role == "user") {
-		whereString += " and problem.defunct=0 "
+		query.Where("problem.defunct=0")
 	}
-
-	whereString += " group by problem.id "
-	whereString += " order by problem.id asc"
-	utils.Consolelog(whereString)
+	query.Group("problem.id")
+	query.Order("problem.id desc")
+	problems := []entity.Problem{}
+	err := query.Scopes(Paginate(c)).Find(&problems).Error
 	rows, total, err := model.Paginate(&page, &perpage, "problem left join problem_tag on problem.id = problem_tag.problem_id",
 		[]string{"problem.*"}, whereString)
-	utils.Consolelog(whereString)
 
-	if utils.CheckError(c, err, "数据获取失败") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
 
 	// 不统计比赛中的提交

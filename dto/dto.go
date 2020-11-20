@@ -50,3 +50,13 @@ type UserWithRoleDto struct {
 	entity.User
 	Role string `json:"role"`
 }
+
+type problemListItemDto struct {
+	Id       int
+	Title    string
+	Accepted int
+	Submit   int
+	Solved   int
+	Tags     []entity.Tag
+	Level    int
+}
