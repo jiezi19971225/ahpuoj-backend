@@ -92,13 +92,13 @@ func StoreSeries(c *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		TeamMode:    req.TeamMode,
-		UserId:      user.Id,
+		UserId:      user.ID,
 	}
 	err = series.Save()
 	if utils.CheckError(c, err, "新建系列赛失败，该系列赛已存在") != nil {
 		return
 	}
-	idStr := strconv.Itoa(user.Id)
+	idStr := strconv.Itoa(user.ID)
 	seriesIdStr := strconv.Itoa(series.Id)
 	if user.Role != "admin" {
 		enforcer := model.GetCasbin()

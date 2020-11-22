@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -20,6 +21,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func IndexOf(array interface{}, val interface{}) (index int) {
+	index = -1
+	switch reflect.TypeOf(array).Kind() {
+	case reflect.Slice:
+		{
+			s := reflect.ValueOf(array)
+			for i := 0; i < s.Len(); i++ {
+				if reflect.DeepEqual(val, s.Index(i).Interface()) {
+					index = i
+					return
+				}
+			}
+		}
+	}
+	return
+}
 
 func Consolelog(contents ...interface{}) {
 	enviroment, _ := config.Conf.GetValue("project", "enviroment")

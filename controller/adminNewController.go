@@ -3,6 +3,7 @@ package controller
 import (
 	"ahpuoj/entity"
 	"ahpuoj/request"
+	"ahpuoj/utils"
 	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
 	"net/http"
@@ -57,7 +58,7 @@ func StoreNew(c *gin.Context) {
 	}
 	new := entity.New{
 		Title:   req.Title,
-		Content: null.StringFrom(req.Content),
+		Content: utils.RelativeNullString(null.StringFrom(req.Content)),
 	}
 	err = ORM.Create(&new).Error
 	if err != nil {
@@ -79,7 +80,7 @@ func UpdateNew(c *gin.Context) {
 	new := entity.New{
 		ID:      id,
 		Title:   req.Title,
-		Content: null.StringFrom(req.Content),
+		Content: utils.RelativeNullString(null.StringFrom(req.Content)),
 	}
 	err = ORM.Model(&new).Updates(new).Error
 	if err != nil {

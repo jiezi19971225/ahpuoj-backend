@@ -1,24 +1,25 @@
 package middleware
 
 import (
-	"ahpuoj/model"
+	"ahpuoj/dao/orm"
+	"ahpuoj/dto"
+	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"errors"
-
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 )
 
-func parseToken(c *gin.Context) (model.User, error) {
+func parseToken(c *gin.Context) (dto.UserWithRoleDto, error) {
 
 	tokenString := c.GetHeader("Authorization")
 	// 用于文件下载请求，从 cookies 中读取
 	if tokenString == "" {
 		tokenString, _ = c.Cookie("access-token")
 	}
-	var user model.User
-	var role string
+	var user dto.UserWithRoleDto
+	var role entity.Role
 
 	token, err := jwt.ParseWithClaims(tokenString, &utils.MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(utils.TokenSinature), nil
@@ -35,13 +36,14 @@ func parseToken(c *gin.Context) (model.User, error) {
 	if claims, ok := token.Claims.(*utils.MyCustomClaims); ok {
 		c.Set("tokenExpireAt", claims.ExpiresAt)
 		username := claims.UserName
-		err = model.DB.Get(&user, "select * from user where username = ?", username)
+		userEntity := entity.User{}
+		err = orm.ORM.Model(entity.User{}).Where("username = ?", username).Find(&userEntity).Error
 		if err != nil {
 			return user, errors.New("用户不存在")
 		}
-		err = model.DB.Get(&role, "select role.name from role where id = ?", user.RoleId)
-		utils.Consolelog("role", role)
-		user.Role = role
+		orm.ORM.Model(entity.Role{}).Where("id = ?", userEntity.RoleId).Find(&role)
+		user.User = userEntity
+		user.Role = role.Name
 		// 判断用户登录token是否存在redis缓存中
 		conn := REDIS.Get()
 		defer conn.Close()

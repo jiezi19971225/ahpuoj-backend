@@ -1,6 +1,9 @@
 package dto
 
-import "ahpuoj/entity"
+import (
+	"ahpuoj/entity"
+	"gopkg.in/guregu/null.v4"
+)
 
 type CreatorInfo struct {
 	Username string `json:"username"`
@@ -51,12 +54,46 @@ type UserWithRoleDto struct {
 	Role string `json:"role"`
 }
 
-type problemListItemDto struct {
-	Id       int
-	Title    string
-	Accepted int
-	Submit   int
-	Solved   int
-	Tags     []entity.Tag
-	Level    int
+type ProblemListItemDto struct {
+	ID       int          `json:"id"`
+	Title    string       `json:"title"`
+	Accepted int          `json:"accepted"`
+	Submit   int          `json:"submit"`
+	Solved   int          `json:"solved"`
+	Status   int          `json:"status"`
+	Tags     []entity.Tag `gorm:"many2many:problem_tag;" json:"tags"`
+	Level    int          `json:"level"`
+}
+
+type ContestInfoDto struct {
+	entity.Contest
+	Status int `json:"status"`
+}
+
+type SolutionInfoDto struct {
+	entity.Solution
+	Public       int    `json:"public"`
+	Username     string `json:"username"`
+	Nick         string `json:"nick"`
+	Avatar       string `json:"avatar"`
+	ProblemTitle string `json:"problem_title"`
+}
+
+type IssueInfoDto struct {
+	entity.Issue
+	Username     string      `json:"username"`
+	Nick         string      `json:"nick"`
+	UserAvatar   string      `json:"avatar"`
+	ReplyCount   int         `json:"reply_count"`
+	ProblemTitle null.String `json:"ptitle"`
+}
+
+type ReplyInfoDto struct {
+	entity.Reply
+	Username      string         `json:"username"`
+	ReplyUserNick string         `json:"rnick"`
+	Nick          string         `json:"user_nick"`
+	Avatar        string         `json:"avatar"`
+	ReplyCount    int            `json:"reply_count"`
+	SubReplys     []ReplyInfoDto `json:"sub_replys"`
 }

@@ -6,6 +6,6 @@ type SourceCode struct {
 	Public     int    `json:"public"`
 }
 
-func (SourceCode) SourceCode() string {
+func (SourceCode) TableName() string {
 	return "source_code"
 }

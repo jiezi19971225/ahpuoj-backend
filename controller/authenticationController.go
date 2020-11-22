@@ -2,11 +2,11 @@ package controller
 
 import (
 	"ahpuoj/config"
-	"ahpuoj/model"
+	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"crypto/sha1"
-	"database/sql"
 	"fmt"
+	"gopkg.in/guregu/null.v4"
 	"net/http"
 	"strconv"
 	"time"
@@ -19,17 +19,17 @@ func Login(c *gin.Context) {
 		Username string `json:"username" binding:"required,ascii,max=20"`
 		Password string `json:"password" binding:"required,ascii,min=6,max=20"`
 	}
-	var user model.User
+	var user entity.User
 	err := c.ShouldBindJSON(&req)
 	if utils.CheckError(c, err, "参数错误") != nil {
 		return
 	}
-	err = DB.Get(&user, "select * from user where username = ?", req.Username)
-	if utils.CheckError(c, err, "用户不存在") != nil {
-		return
+	err = ORM.Where("username = ?", req.Username).First(&user).Error
+	if err != nil {
+		panic(err)
 	}
 	h := sha1.New()
-	h.Write([]byte(user.PassSalt))
+	h.Write([]byte(user.Passsalt))
 	h.Write([]byte(req.Password))
 	hashedPassword := fmt.Sprintf("%x", h.Sum(nil))
 	if hashedPassword != user.Password {
@@ -76,14 +76,14 @@ func Register(c *gin.Context) {
 	h.Write([]byte(salt))
 	h.Write([]byte(req.Password))
 	hashedPassword := fmt.Sprintf("%x", h.Sum(nil))
-	user := model.User{
+	user := entity.User{
 		Username: req.Username,
 		Nick:     req.Nick,
-		Email:    model.NullString{sql.NullString{req.Email, true}},
+		Email:    null.StringFrom(req.Email),
 		Password: hashedPassword,
-		PassSalt: salt,
+		Passsalt: salt,
 	}
-	err = user.Save()
+	err = ORM.Create(&user).Error
 	if utils.CheckError(c, err, "注册失败，邮箱/用户名/昵称可能已被注册") != nil {
 		return
 	}

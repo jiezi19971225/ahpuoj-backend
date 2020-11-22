@@ -2,6 +2,7 @@ package controller
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/dto"
 	"ahpuoj/model"
 	"ahpuoj/mq"
 	"ahpuoj/request"
@@ -28,7 +29,7 @@ import (
 func GetUser(c *gin.Context) {
 
 	user, _ := c.Get("user")
-	if user, ok := user.(model.User); ok {
+	if user, ok := user.(dto.UserWithRoleDto); ok {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "用户信息获取成功",
 			"user":    user,
@@ -38,7 +39,7 @@ func GetUser(c *gin.Context) {
 
 // 账号设置中重设昵称的接口
 func ResetNick(c *gin.Context) {
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 	var req struct {
 		Nick string `json:"nick" binding:"required,max=20"`
@@ -48,7 +49,7 @@ func ResetNick(c *gin.Context) {
 		return
 	}
 	user.Nick = req.Nick
-	_, err = DB.Exec("update user set nick = ? where id = ?", req.Nick, user.Id)
+	_, err = DB.Exec("update user set nick = ? where id = ?", req.Nick, user.ID)
 	if utils.CheckError(c, err, "该昵称已被使用") != nil {
 		return
 	}
@@ -61,7 +62,7 @@ func ResetNick(c *gin.Context) {
 
 // 账号设置中重设密码的接口
 func ResetPassword(c *gin.Context) {
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 	var req struct {
 		OldPassword     string `json:"oldpassword" binding:"required,ascii,min=6,max=20"`
@@ -73,7 +74,7 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 	h := sha1.New()
-	h.Write([]byte(user.PassSalt))
+	h.Write([]byte(user.Passsalt))
 	h.Write([]byte(req.OldPassword))
 	hashedOldPassword := fmt.Sprintf("%x", h.Sum(nil))
 
@@ -100,7 +101,7 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	_, err = DB.Exec("update user set password = ?, passsalt = ? where id = ?", hashedPassword, salt, user.Id)
+	_, err = DB.Exec("update user set password = ?, passsalt = ? where id = ?", hashedPassword, salt, user.ID)
 	utils.Consolelog(err)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "密码修改成功",
@@ -216,7 +217,7 @@ func SubmitToJudge(c *gin.Context) {
 				} else {
 					// 检测是否有提交权限
 					var temp int
-					DB.Get(&temp, "select count(1) from contest_user where contest_id = ? and user_id = ?", req.ContestId, user.Id)
+					DB.Get(&temp, "select count(1) from contest_user where contest_id = ? and user_id = ?", req.ContestId, user.ID)
 					if temp > 0 {
 						submitable = true
 					}
@@ -234,12 +235,12 @@ func SubmitToJudge(c *gin.Context) {
 		var teamId int
 		// 如果为团队赛模式，并且非管理员提交，查询当前用户的teamId
 		if contest.TeamMode == 1 && user.Role != "admin" {
-			err = DB.Get(&teamId, "select team_id from contest_team_user ctu where ctu.contest_id = ? and ctu.user_id = ?", contest.Id, user.Id)
+			err = DB.Get(&teamId, "select team_id from contest_team_user ctu where ctu.contest_id = ? and ctu.user_id = ?", contest.Id, user.ID)
 		}
 		solution := model.Solution{
 			ProblemId:  req.ProblemId,
 			TeamId:     teamId,
-			UserId:     user.Id,
+			UserId:     user.ID,
 			ContestId:  req.ContestId,
 			Num:        req.Num,
 			IP:         c.ClientIP(),
@@ -260,7 +261,7 @@ func SubmitToJudge(c *gin.Context) {
 		}
 		// 将判题任务推入消息队列
 		jsondata, _ := json.Marshal(gin.H{
-			"UserId":       user.Id,
+			"UserId":       user.ID,
 			"TestrunCount": 0,
 			"SolutionId":   solution.Id,
 			"ProblemId":    req.ProblemId,
@@ -287,14 +288,14 @@ func SubmitToJudge(c *gin.Context) {
 
 // 切换代码公开状态
 func ToggleSolutionStatus(c *gin.Context) {
-	var user model.User
+	var user dto.UserWithRoleDto
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	user, _ = GetUserInstance(c)
 
 	var solutionUserId int
 	DB.Get(&solutionUserId, "select user_id from solution where solution_id = ?", id)
-	if user.Id != solutionUserId {
+	if user.ID != solutionUserId {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "对不起，你没有修改权限",
 		})
@@ -310,7 +311,7 @@ func ToggleSolutionStatus(c *gin.Context) {
 
 // 下载题目数据文件
 func DownloadDataFile(c *gin.Context) {
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 
 	pidStr := c.Query("pid")
@@ -321,7 +322,7 @@ func DownloadDataFile(c *gin.Context) {
 
 	// 检验提交是否存在
 	userId := 0
-	err := DB.Get(&userId, "select 1 from solution where solution_id = ? and problem_id = ? and user_id = ?", sid, pid, user.Id)
+	err := DB.Get(&userId, "select 1 from solution where solution_id = ? and problem_id = ? and user_id = ?", sid, pid, user.ID)
 	if utils.CheckError(c, err, "数据不存在") != nil {
 		return
 	}
@@ -366,7 +367,7 @@ func UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 	// 如果不是默认头像 删除原头像
 	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
@@ -375,7 +376,7 @@ func UploadAvatar(c *gin.Context) {
 		projectPath := webDir + "/"
 		os.Remove(projectPath + user.Avatar)
 	}
-	DB.Exec("update user set avatar = ? where id = ?", url, user.Id)
+	DB.Exec("update user set avatar = ? where id = ?", url, user.ID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "头像上传成功",
@@ -387,7 +388,7 @@ func UploadAvatar(c *gin.Context) {
 // 发布主题帖
 func PostIssue(c *gin.Context) {
 	var err error
-	var user model.User
+	var user dto.UserWithRoleDto
 
 	user, _ = GetUserInstance(c)
 	var req request.Issue
@@ -409,7 +410,7 @@ func PostIssue(c *gin.Context) {
 	issue := model.Issue{
 		Title:     req.Title,
 		ProblemId: req.ProblemId,
-		UserId:    user.Id,
+		UserId:    user.ID,
 	}
 	err = issue.Save()
 	if utils.CheckError(c, err, "发布讨论主题失败") != nil {
@@ -425,7 +426,7 @@ func PostIssue(c *gin.Context) {
 // 回复主题帖
 func ReplyToIssue(c *gin.Context) {
 	var err error
-	var user model.User
+	var user dto.UserWithRoleDto
 	issueId, _ := strconv.Atoi(c.Param("id"))
 
 	user, _ = GetUserInstance(c)
@@ -457,7 +458,7 @@ func ReplyToIssue(c *gin.Context) {
 	}
 	reply := model.Reply{
 		IssueId:     issueId,
-		UserId:      user.Id,
+		UserId:      user.ID,
 		ReplyId:     req.ReplyId,
 		ReplyUserId: req.ReplyUserId,
 		Content:     req.Content,
@@ -476,7 +477,7 @@ func ReplyToIssue(c *gin.Context) {
 // 获取回复我的信息帖子列表
 func GetMyReplys(c *gin.Context) {
 	var err error
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
@@ -484,8 +485,8 @@ func GetMyReplys(c *gin.Context) {
 		page = 1
 	}
 	// 第一步只获取对主题的回复
-	whereString := "where reply.reply_user_id = " + strconv.Itoa(user.Id)
-	// + " and reply.user_id != " + strconv.Itoa(user.Id)
+	whereString := "where reply.reply_user_id = " + strconv.Itoa(user.ID)
+	// + " and reply.user_id != " + strconv.Itoa(user.ID)
 	// 管理员可以查看被删除的回复
 	if user.Role != "admin" {
 		whereString += " and reply.is_deleted = 0 "
@@ -513,7 +514,7 @@ func GetMyReplys(c *gin.Context) {
 // 获取最近一次提交的代码
 func GetLatestSource(c *gin.Context) {
 	var err error
-	var user model.User
+	var user dto.UserWithRoleDto
 	user, _ = GetUserInstance(c)
 	problemId, _ := strconv.Atoi(c.Param("id"))
 	if utils.CheckError(c, err, "参数错误") != nil {
@@ -526,7 +527,7 @@ func GetLatestSource(c *gin.Context) {
 	}
 	var sourceCode SourceCode
 	err = DB.Get(&sourceCode, `select source_code.source,solution.language from solution inner join source_code 
-	on source_code.solution_id = solution.solution_id where solution.problem_id = ? and solution.user_id = ? order by solution.in_date desc limit 1`, problemId, user.Id)
+	on source_code.solution_id = solution.solution_id where solution.problem_id = ? and solution.user_id = ? order by solution.in_date desc limit 1`, problemId, user.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "获取最近提交信息成功",
 		"sourcecode": sourceCode,
@@ -536,7 +537,7 @@ func GetLatestSource(c *gin.Context) {
 // 获取最近一次比赛中提交的代码
 func GetLatestContestSource(c *gin.Context) {
 	var err error
-	var user model.User
+	var user dto.UserWithRoleDto
 
 	user, _ = GetUserInstance(c)
 	contestId, _ := strconv.Atoi(c.Param("id"))
@@ -553,7 +554,7 @@ func GetLatestContestSource(c *gin.Context) {
 	}
 	var sourceCode SourceCode
 	err = DB.Get(&sourceCode, `select source_code.source,solution.language from solution inner join source_code 
-	on source_code.solution_id = solution.solution_id where solution.contest_id = ? and solution.num = ? and solution.user_id = ? order by solution.in_date desc limit 1`, contestId, num, user.Id)
+	on source_code.solution_id = solution.solution_id where solution.contest_id = ? and solution.num = ? and solution.user_id = ? order by solution.in_date desc limit 1`, contestId, num, user.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "获取最近提交信息成功",
 		"sourcecode": sourceCode,

@@ -12,7 +12,7 @@ import (
 )
 
 func GetTeam(c *gin.Context) {
-	var team model.Team
+	var team entity.Team
 	id, _ := strconv.Atoi(c.Param("id"))
 	err := ORM.Model(entity.Team{}).First(&team, id).Error
 	if err != nil {
@@ -91,14 +91,14 @@ func StoreTeam(c *gin.Context) {
 	}
 	team := entity.Team{
 		Name:      req.Name,
-		CreatorId: user.Id,
+		CreatorId: user.ID,
 	}
 	err = ORM.Create(&team).Error
 	// TODO 先这样处理 给次级管理员添加权限
 	if utils.CheckError(c, err, "") != nil {
 		return
 	}
-	idStr := strconv.Itoa(user.Id)
+	idStr := strconv.Itoa(user.ID)
 	teamIdStr := strconv.Itoa(team.ID)
 	if user.Role != "admin" {
 		enforcer := model.GetCasbin()

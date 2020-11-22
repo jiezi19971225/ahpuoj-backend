@@ -5,7 +5,7 @@ import (
 	mysqlDao "ahpuoj/dao/mysql"
 	"ahpuoj/dao/orm"
 	redisDao "ahpuoj/dao/redis"
-	"ahpuoj/model"
+	"ahpuoj/dto"
 	"ahpuoj/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
@@ -53,10 +53,10 @@ func init() {
 }
 
 // 获得user实例
-func GetUserInstance(c *gin.Context) (model.User, bool) {
-	var user model.User
+func GetUserInstance(c *gin.Context) (dto.UserWithRoleDto, bool) {
+	var user dto.UserWithRoleDto
 	userInterface, loggedIn := c.Get("user")
-	if userInterface, ok := userInterface.(model.User); ok {
+	if userInterface, ok := userInterface.(dto.UserWithRoleDto); ok {
 		user = userInterface
 	}
 	return user, loggedIn

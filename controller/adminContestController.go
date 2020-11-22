@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"ahpuoj/constant"
 	"ahpuoj/entity"
 	"ahpuoj/model"
 	"ahpuoj/request"
@@ -70,7 +71,7 @@ func StoreContest(c *gin.Context) {
 		LangMask:    req.LangMask,
 		Private:     req.Private,
 		TeamMode:    req.TeamMode,
-		CreatorId:   user.Id,
+		CreatorId:   user.ID,
 	}
 	err = ORM.Create(&contest).Error
 	if err != nil {
@@ -79,7 +80,7 @@ func StoreContest(c *gin.Context) {
 	// 处理竞赛作业包含的问题
 	contestService.AddProblems(&contest, req.Problems)
 
-	idStr := strconv.Itoa(user.Id)
+	idStr := strconv.Itoa(user.ID)
 	contestIdStr := strconv.Itoa(contest.ID)
 	if user.Role != "admin" {
 		enforcer := model.GetCasbin()
@@ -334,7 +335,7 @@ func GetContestProblemSolutions(c *gin.Context) {
 			continue
 		}
 		prename = solution.Username
-		f, err := w.Create(solution.Username + "." + utils.LanguageExt[solution.Language])
+		f, err := w.Create(solution.Username + "." + constant.LanguageExt[solution.Language])
 		if err != nil {
 			utils.Consolelog(err)
 		}

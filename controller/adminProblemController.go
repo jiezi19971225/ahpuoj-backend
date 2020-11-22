@@ -57,22 +57,22 @@ func StoreProblem(c *gin.Context) {
 	}
 	problem := entity.Problem{
 		Title:        req.Title,
-		Description:  null.StringFrom(req.Description),
-		Input:        null.StringFrom(req.Input),
-		Output:       null.StringFrom(req.Output),
+		Description:  utils.RelativeNullString(null.StringFrom(req.Description)),
+		Input:        utils.RelativeNullString(null.StringFrom(req.Input)),
+		Output:       utils.RelativeNullString(null.StringFrom(req.Output)),
 		SampleInput:  null.StringFrom(req.SampleInput),
 		SampleOutput: null.StringFrom(req.SampleOutput),
 		Spj:          req.Spj,
 		Level:        req.Level,
-		Hint:         null.StringFrom(req.Hint),
+		Hint:         utils.RelativeNullString(null.StringFrom(req.Hint)),
 		TimeLimit:    req.TimeLimit,
 		MemoryLimit:  req.MemoryLimit,
-		CreatorId:    user.Id,
+		CreatorId:    user.ID,
 	}
 
 	problemService.SaveRecord(&problem)
 
-	idStr := strconv.Itoa(user.Id)
+	idStr := strconv.Itoa(user.ID)
 	problemIdStr := strconv.Itoa(problem.ID)
 
 	if user.Role != "admin" {
@@ -110,14 +110,14 @@ func UpdateProblem(c *gin.Context) {
 	problem := entity.Problem{
 		ID:           id,
 		Title:        req.Title,
-		Description:  null.StringFrom(req.Description),
-		Input:        null.StringFrom(req.Input),
-		Output:       null.StringFrom(req.Output),
+		Description:  utils.RelativeNullString(null.StringFrom(req.Description)),
+		Input:        utils.RelativeNullString(null.StringFrom(req.Input)),
+		Output:       utils.RelativeNullString(null.StringFrom(req.Output)),
 		SampleInput:  null.StringFrom(req.SampleInput),
 		SampleOutput: null.StringFrom(req.SampleOutput),
 		Spj:          req.Spj,
 		Level:        req.Level,
-		Hint:         null.StringFrom(req.Hint),
+		Hint:         utils.RelativeNullString(null.StringFrom(req.Hint)),
 		TimeLimit:    req.TimeLimit,
 		MemoryLimit:  req.MemoryLimit,
 	}
@@ -148,7 +148,7 @@ func DeleteProblem(c *gin.Context) {
 	}
 	problemService.DeleteRecord(&problem)
 
-	idStr := strconv.Itoa(user.Id)
+	idStr := strconv.Itoa(user.ID)
 	problemIdStr := strconv.Itoa(problem.ID)
 	enforcer := model.GetCasbin()
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr, "PUT")

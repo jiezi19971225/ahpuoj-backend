@@ -5,6 +5,6 @@ type CompileInfo struct {
 	Error      string `json:"error"`
 }
 
-func (CompileInfo) CompileInfo() string {
+func (CompileInfo) TableName() string {
 	return "compileinfo"
 }

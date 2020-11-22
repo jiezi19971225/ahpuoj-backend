@@ -2,6 +2,7 @@ package service
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/constant"
 	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/mq"
@@ -232,4 +233,44 @@ func (this *ProblemService) RejudgeProblem(id int) {
 			mq.Publish("oj", "problem", jsondata)
 		}
 	}()
+}
+
+/**
+将问题列表转化为带有问题完成状态的列表，同时去除问题内容等字段
+*/
+func (this *ProblemService) ConvertList(problemList []entity.Problem, loggedIn bool) []dto.ProblemListItemDto {
+
+	problemIds := []int{}
+	results := []dto.ProblemListItemDto{}
+
+	for _, problem := range problemList {
+		problemIds = append(problemIds, problem.ID)
+		results = append(results, dto.ProblemListItemDto{
+			ID:       problem.ID,
+			Title:    problem.Title,
+			Accepted: problem.Accepted,
+			Submit:   problem.Submit,
+			Solved:   problem.Solved,
+			Status:   0,
+			Tags:     problem.Tags,
+			Level:    problem.Level,
+		})
+	}
+	if loggedIn {
+		acProblemIds := []int{}
+		waProblemIds := []int{}
+
+		this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result = ?", constant.ACCEPT).Group("problem_id").Pluck("problem_id", &acProblemIds)
+		this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result != ?", constant.ACCEPT).Group("problem_id").Pluck("problem_id", &waProblemIds)
+
+		for index, result := range results {
+			if utils.IndexOf(waProblemIds, result.ID) != -1 {
+				results[index].Status = constant.PROBLEM_WA
+			}
+			if utils.IndexOf(acProblemIds, result.ID) != -1 {
+				results[index].Status = constant.PROBLEM_AC
+			}
+		}
+	}
+	return results
 }

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ahpuoj/dto"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"net/http"
@@ -14,9 +15,9 @@ func CasbinMiddleware() gin.HandlerFunc {
 		var sub1 string
 		var sub2 string
 		user, _ := c.Get("user")
-		if user, ok := user.(model.User); ok {
+		if user, ok := user.(dto.UserWithRoleDto); ok {
 			sub1 = user.Role
-			sub2 = strconv.Itoa(user.Id)
+			sub2 = strconv.Itoa(user.ID)
 		}
 
 		obj := c.Request.URL.Path

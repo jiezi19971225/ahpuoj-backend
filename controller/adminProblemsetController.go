@@ -2,6 +2,7 @@ package controller
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/constant"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"database/sql"
@@ -79,7 +80,7 @@ func ImportProblemSet(c *gin.Context) {
 
 				var languageId int
 				// 查找 language 的index
-				for k, v := range utils.LanguageName {
+				for k, v := range constant.LanguageName {
 					if v == source.Language {
 						languageId = k
 						break
@@ -88,7 +89,7 @@ func ImportProblemSet(c *gin.Context) {
 				solution := model.Solution{
 					ProblemId:  problem.Id,
 					TeamId:     0,
-					UserId:     user.Id,
+					UserId:     user.ID,
 					ContestId:  0,
 					Num:        0,
 					IP:         c.ClientIP(),

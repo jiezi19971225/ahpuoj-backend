@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ahpuoj/constant"
 	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/utils"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type ContestService struct {
@@ -247,5 +249,17 @@ func (this *ContestService) DeleteTeam(contest *entity.Contest, team *entity.Tea
 	})
 	if err != nil {
 		panic(err)
+	}
+}
+
+func (this *ContestService) CalcStatus(contest *entity.Contest) (status int) {
+
+	nowTime := time.Now()
+	if nowTime.Unix() < contest.StartTime.Unix() {
+		return constant.CONTEST_NOT_START
+	} else if nowTime.Unix() > contest.EndTime.Unix() {
+		return constant.CONTEST_FINISH
+	} else {
+		return constant.CONTEST_RUNNING
 	}
 }

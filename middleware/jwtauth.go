@@ -3,7 +3,7 @@ package middleware
 import (
 	"ahpuoj/config"
 	"ahpuoj/controller"
-	"ahpuoj/model"
+	"ahpuoj/dto"
 	"ahpuoj/utils"
 	"fmt"
 	"strconv"
@@ -59,7 +59,7 @@ func JwtauthMiddleware() gin.HandlerFunc {
 						if expire_at+twoWeeks > time.Now().Unix() {
 							fmt.Println("token在刷新时间内")
 							user, _ := c.Get("user")
-							if user, ok := user.(model.User); ok {
+							if user, ok := user.(dto.UserWithRoleDto); ok {
 								newToken := utils.CreateToken(user.Username)
 								conn := REDIS.Get()
 								defer conn.Close()

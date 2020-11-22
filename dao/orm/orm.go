@@ -14,7 +14,6 @@ import (
 var ORM *gorm.DB
 
 func init() {
-
 	var err error
 	dbMasterCfg, _ := config.Conf.GetSection("mysql")
 	dbSlaveCfg, _ := config.Conf.GetSection("mysql_slave")

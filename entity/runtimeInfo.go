@@ -5,6 +5,6 @@ type RuntimeInfo struct {
 	Error      string `json:"error"`
 }
 
-func (RuntimeInfo) RuntimeInfo() string {
+func (RuntimeInfo) TableName() string {
 	return "runtimeinfo"
 }
