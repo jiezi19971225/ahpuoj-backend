@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"ahpuoj/entity"
 	"ahpuoj/model"
 	"ahpuoj/utils"
 	"net/http"
@@ -57,6 +58,7 @@ func SetSettings(c *gin.Context) {
 	})
 }
 
+// TODO 功能待测试
 // 后续系统更新新功能接口的权限二级管理员是没有的，调用这个接口手动同步
 func FixPermission(c *gin.Context) {
 	enforcer := model.GetCasbin()
@@ -64,7 +66,9 @@ func FixPermission(c *gin.Context) {
 		UserId int `db:"user_id"`
 		TeamId int `db:"team_id"`
 	}
-	DB.Select(&teams, "select team.id as team_id,team.user_id from team inner join user on team.user_id = user.id inner join role on user.role_id = role.id where role.name = 'secondaryadmin'")
+	ORM.Model(entity.Team{}).Select("team.id as team_id,team.user_id").
+		Joins(" inner join user on team.user_id = user.id").Joins("inner join role on user.role_id = role.id").
+		Where("role.name = ?", "secondaryadmin").Find(&teams)
 	for _, team := range teams {
 		idStr := strconv.Itoa(team.UserId)
 		teamIdStr := strconv.Itoa(team.TeamId)
@@ -77,7 +81,9 @@ func FixPermission(c *gin.Context) {
 		UserId    int `db:"user_id"`
 		ProblemId int `db:"problem_id"`
 	}
-	DB.Select(&teams, "select problem.id as problem_id,problem.user_id from problem inner join user on problem.user_id = user.id inner join role on user.role_id = role.id where role.name = 'secondaryadmin'")
+	ORM.Model(entity.Problem{}).Select("team.id as team_id,team.user_id").
+		Joins(" inner join user on team.user_id = user.id").Joins("inner join role on user.role_id = role.id").
+		Where("role.name = ?", "secondaryadmin").Find(&problems)
 	for _, problem := range problems {
 		idStr := strconv.Itoa(problem.UserId)
 		problemIdStr := strconv.Itoa(problem.ProblemId)

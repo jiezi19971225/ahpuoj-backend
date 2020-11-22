@@ -5,6 +5,7 @@ import (
 	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"gopkg.in/guregu/null.v4"
 	"net/http"
@@ -110,17 +111,17 @@ func SendFindPassEmail(c *gin.Context) {
 		Email string `json:"email" binding:"required,email,max=40"`
 	}
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
-	var user_id int
-	err = DB.Get(&user_id, "select id from user where email = ?", req.Email)
-	if utils.CheckError(c, err, "用户不存在") != nil {
-		return
+	var user entity.User
+	err = ORM.Model(entity.User{}).Where("email = ?", req.Email).First(&user).Error
+	if err != nil {
+		panic(errors.New("用户不存在"))
 	}
 	// 生成随机字符串
 	token := utils.GetRandomString(30)
-	_, err = DB.Exec("insert into resetpassword(user_id,token,expired_at) values(?,?,date_add(NOW(),INTERVAL 1 hour)) on duplicate key update token = ?,expired_at=date_add(NOW(),INTERVAL 1 hour)", user_id, token, token)
+	ORM.Exec("insert into resetpassword(user_id,token,expired_at) values(?,?,date_add(NOW(),INTERVAL 1 hour)) on duplicate key update token = ?,expired_at=date_add(NOW(),INTERVAL 1 hour)", user.ID, token, token)
 	server, _ := config.Conf.GetValue("project", "server")
 	mailTo := []string{
 		req.Email,
@@ -135,20 +136,16 @@ func SendFindPassEmail(c *gin.Context) {
 	})
 }
 
+// 验证重设密码token是否正确
 func VeriryResetPassToken(c *gin.Context) {
 	token := c.Query("token")
-	type T struct {
-		Token      string `db:"token"`
-		Expired_at string `db:"expired_at"`
-	}
-	var t T
-	err := DB.Get(&t, "select token,expired_at from  resetpassword where token = ?", token)
-	if utils.CheckError(c, err, "token非法") != nil {
-		return
+	var resetPassword entity.ResetPassword
+	err := ORM.Model(entity.ResetPassword{}).Where("token = ?", token).First(&resetPassword).Error
+	if err != nil {
+		panic(errors.New("token非法"))
 	}
 	now := time.Now()
-	expire, _ := time.Parse("2006-01-02 15:04:05", t.Expired_at)
-	if now.After(expire) {
+	if now.After(resetPassword.ExpiredAt) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "token已过期，请重新发送邮件",
 		})
@@ -166,25 +163,19 @@ func ResetPassByToken(c *gin.Context) {
 		ConfirmPassword string `json:"confirmpassword" binding:"required`
 	}
 	err := c.ShouldBindJSON(&req)
-	if utils.CheckError(c, err, "参数错误") != nil {
-		return
+	if err != nil {
+		panic(err)
 	}
-	type T struct {
-		User_id    string `db:"user_id"`
-		Token      string `db:"token"`
-		Expired_at string `db:"expired_at"`
-	}
-	// 验证token
-	var t T
-	err = DB.Get(&t, "select user_id,token,expired_at from  resetpassword where token = ?", req.Token)
 
-	if utils.CheckError(c, err, "token非法") != nil {
-		return
+	// 验证token
+	var resetPassword entity.ResetPassword
+	err = ORM.Model(entity.ResetPassword{}).Where("token = ?", req.Token).First(&resetPassword).Error
+	if err != nil {
+		panic(errors.New("token非法"))
 	}
 
 	now := time.Now()
-	expire, _ := time.Parse("2006-01-02 15:04:05", t.Expired_at)
-	if now.After(expire) {
+	if now.After(resetPassword.ExpiredAt) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "token已过期，请重新发送邮件",
 		})
@@ -198,8 +189,8 @@ func ResetPassByToken(c *gin.Context) {
 	h.Write([]byte(salt))
 	h.Write([]byte(req.Password))
 	hashedPassword := fmt.Sprintf("%x", h.Sum(nil))
-	_, err = DB.Exec("update user set password = ?, passsalt = ? where id = ?", hashedPassword, salt, t.User_id)
-	_, err = DB.Exec("delete from resetpassword where token = ?", t.Token)
+	ORM.Model(entity.User{ID: resetPassword.UserId}).Updates(map[string]interface{}{"password": hashedPassword, "passsalt": salt})
+	ORM.Delete(&resetPassword)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "密码修改成功",
 	})
