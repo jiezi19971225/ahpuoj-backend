@@ -42,6 +42,7 @@ var teamService service.TeamService
 var tagService service.TagService
 var problemService service.ProblemService
 var contestService service.ContestService
+var seriesService service.SeriesService
 var userService service.UserService
 
 func init() {
@@ -50,6 +51,7 @@ func init() {
 	problemService = service.ProblemService{ORM}
 	contestService = service.ContestService{ORM}
 	userService = service.UserService{ORM}
+	seriesService = service.SeriesService{ORM}
 }
 
 // 获得user实例

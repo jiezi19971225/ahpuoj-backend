@@ -146,6 +146,7 @@ func (this *ContestService) AddUsers(contest *entity.Contest, userlist string, t
 }
 
 func (this *ContestService) AddTeam(contest *entity.Contest, team *entity.Team) {
+	// 检查竞赛作业是否存在
 	err := this.First(&contest).Error
 	if err != nil {
 		panic(err)

@@ -24,6 +24,11 @@ type ContestDto struct {
 	CreatorInfo
 }
 
+type SeriesDto struct {
+	entity.Contest
+	CreatorInfo
+}
+
 type ContestDetailDto struct {
 	entity.Contest
 	Problems string `json:"problems"`

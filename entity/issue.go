@@ -6,8 +6,8 @@ import (
 
 type Issue struct {
 	ID        int                `json:"id"`
-	Title     string             `json:"title" binding:"required,max=20"`
-	ProblemId int                `json:"problem_id" binding:"gte=0"`
+	Title     string             `json:"title"`
+	ProblemId int                `json:"problem_id"`
 	UserId    int                `json:"user_id"`
 	CreatedAt utils.JSONDateTime `json:"created_at"`
 	UpdatedAt utils.JSONDateTime `json:"updated_at"`

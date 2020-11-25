@@ -228,7 +228,6 @@ func IndexContestTeamWithUser(c *gin.Context) {
 func AddContestTeam(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	teamId, _ := strconv.Atoi(c.Param("teamid"))
-	// 检查竞赛是否存在
 	contest := entity.Contest{ID: id}
 	team := entity.Team{ID: teamId}
 	contestService.AddTeam(&contest, &team)
