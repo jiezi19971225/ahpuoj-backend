@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"ahpuoj/dto"
-	"ahpuoj/model"
+	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"net/http"
 	"strconv"
@@ -22,7 +22,7 @@ func CasbinMiddleware() gin.HandlerFunc {
 
 		obj := c.Request.URL.Path
 		act := c.Request.Method
-		enforcer := model.GetCasbin()
+		enforcer := entity.GetCasbin()
 		res1, err1 := enforcer.Enforce(sub1, obj, act)
 		res2, err2 := enforcer.Enforce(sub2, obj, act)
 

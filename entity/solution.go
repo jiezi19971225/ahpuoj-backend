@@ -2,6 +2,7 @@ package entity
 
 import (
 	"gopkg.in/guregu/null.v4"
+	"time"
 )
 
 type Solution struct {
@@ -13,7 +14,7 @@ type Solution struct {
 	Num        int         `json:"num"`
 	Time       int         `json:"time"`
 	Memory     int         `json:"memory"`
-	InDate     string      `json:"in_date"`
+	InDate     time.Time   `json:"in_date"`
 	Result     int         `json:"result"`
 	Language   int         `json:"language"`
 	IP         string      `gorm:"column:ip;" json:"ip"`

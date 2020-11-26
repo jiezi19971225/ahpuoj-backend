@@ -3,7 +3,6 @@ package controller
 import (
 	"ahpuoj/config"
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"encoding/json"
@@ -76,7 +75,7 @@ func StoreProblem(c *gin.Context) {
 	problemIdStr := strconv.Itoa(problem.ID)
 
 	if user.Role != "admin" {
-		enforcer := model.GetCasbin()
+		enforcer := entity.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr, "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr, "DELETE")
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr+"/status", "PUT")
@@ -150,7 +149,7 @@ func DeleteProblem(c *gin.Context) {
 
 	idStr := strconv.Itoa(user.ID)
 	problemIdStr := strconv.Itoa(problem.ID)
-	enforcer := model.GetCasbin()
+	enforcer := entity.GetCasbin()
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr, "PUT")
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr, "DELETE")
 	enforcer.RemovePolicy(idStr, "/api/admin/problem/"+problemIdStr+"/status", "PUT")

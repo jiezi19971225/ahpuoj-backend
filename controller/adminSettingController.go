@@ -2,7 +2,6 @@ package controller
 
 import (
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/utils"
 	"net/http"
 	"strconv"
@@ -61,7 +60,7 @@ func SetSettings(c *gin.Context) {
 // TODO 功能待测试
 // 后续系统更新新功能接口的权限二级管理员是没有的，调用这个接口手动同步
 func FixPermission(c *gin.Context) {
-	enforcer := model.GetCasbin()
+	enforcer := entity.GetCasbin()
 	var teams []struct {
 		UserId int `db:"user_id"`
 		TeamId int `db:"team_id"`

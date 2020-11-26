@@ -3,7 +3,6 @@ package controller
 import (
 	"ahpuoj/constant"
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"archive/zip"
@@ -83,7 +82,7 @@ func StoreContest(c *gin.Context) {
 	idStr := strconv.Itoa(user.ID)
 	contestIdStr := strconv.Itoa(contest.ID)
 	if user.Role != "admin" {
-		enforcer := model.GetCasbin()
+		enforcer := entity.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr, "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr, "DELETE")
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr+"/status", "PUT")

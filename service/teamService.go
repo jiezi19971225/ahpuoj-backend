@@ -3,7 +3,6 @@ package service
 import (
 	"ahpuoj/dto"
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/utils"
 	"errors"
 	"github.com/gin-gonic/gin"
@@ -63,7 +62,7 @@ func (this *TeamService) AddUsers(team *entity.Team, userlist string) []string {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				info = "团队添加用户" + username + "失败，用户不存在"
 			} else {
-				this.Model(model.TeamUser{}).Where("team_id = ? and user_id = ?", team.ID, user.ID).Count(&count)
+				this.Model(entity.TeamUser{}).Where("team_id = ? and user_id = ?", team.ID, user.ID).Count(&count)
 				if count != 0 {
 					info = "团队添加用户" + username + "失败，用户不存在"
 				} else {

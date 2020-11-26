@@ -5,7 +5,6 @@ import (
 	"ahpuoj/constant"
 	"ahpuoj/dto"
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/mq"
 	"ahpuoj/request"
 	"ahpuoj/utils"
@@ -184,7 +183,7 @@ func SubmitToTestRun(c *gin.Context) {
 // 用户提交评测的接口
 func SubmitToJudge(c *gin.Context) {
 	var err error
-	var contest model.Contest
+	var contest entity.Contest
 	user, _ := GetUserInstance(c)
 	var req struct {
 		ProblemId int    `json:"problem_id" binding:"required"`
@@ -214,7 +213,7 @@ func SubmitToJudge(c *gin.Context) {
 	} else {
 		// 比赛的提交
 		if req.ContestId > 0 {
-			var contest entity.Contest
+
 			err = ORM.Model(entity.Contest{}).First(&contest, req.ContestId).Error
 			if err != nil {
 				panic(errors.New("提交失败，竞赛不存在"))
@@ -248,7 +247,7 @@ func SubmitToJudge(c *gin.Context) {
 		var teamId int
 		// 如果为团队赛模式，并且非管理员提交，查询当前用户的teamId
 		if contest.TeamMode == 1 && user.Role != "admin" {
-			ORM.Raw("select team_id from contest_team_user ctu where ctu.contest_id = ? and ctu.user_id = ?", contest.Id, user.ID).Scan(&teamId)
+			ORM.Raw("select team_id from contest_team_user ctu where ctu.contest_id = ? and ctu.user_id = ?", contest.ID, user.ID).Scan(&teamId)
 		}
 		solution := entity.Solution{
 			ProblemId:  req.ProblemId,
@@ -256,6 +255,7 @@ func SubmitToJudge(c *gin.Context) {
 			UserId:     user.ID,
 			ContestId:  req.ContestId,
 			Num:        req.Num,
+			InDate:     time.Now(),
 			IP:         c.ClientIP(),
 			Language:   req.Language,
 			CodeLength: len(req.Source),

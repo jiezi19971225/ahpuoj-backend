@@ -5,7 +5,6 @@ import (
 	"ahpuoj/constant"
 	"ahpuoj/dto"
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/utils"
 	"encoding/json"
 	"errors"
@@ -25,7 +24,7 @@ func NologinGetNewList(c *gin.Context) {
 	var user dto.UserWithRoleDto
 	user, loggedIn := GetUserInstance(c)
 
-	query := ORM.Model(model.New{})
+	query := ORM.Model(entity.New{})
 	if !(loggedIn && user.Role != "user") {
 		query.Where(" defunct = 0 ")
 	}

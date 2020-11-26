@@ -2,7 +2,6 @@ package controller
 
 import (
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"gorm.io/gorm"
@@ -87,7 +86,7 @@ func StoreSeries(c *gin.Context) {
 	idStr := strconv.Itoa(user.ID)
 	seriesIdStr := strconv.Itoa(series.ID)
 	if user.Role != "admin" {
-		enforcer := model.GetCasbin()
+		enforcer := entity.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/series/"+seriesIdStr, "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/series/"+seriesIdStr, "DELETE")
 		enforcer.AddPolicy(idStr, "/api/admin/series/"+seriesIdStr+"/status", "PUT")

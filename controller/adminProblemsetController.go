@@ -3,11 +3,15 @@ package controller
 import (
 	"ahpuoj/config"
 	"ahpuoj/constant"
-	"ahpuoj/model"
+	"ahpuoj/entity"
+	"ahpuoj/mq"
 	"ahpuoj/utils"
-	"database/sql"
+	"encoding/json"
+	"errors"
+	"gopkg.in/guregu/null.v4"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,24 +43,24 @@ func ImportProblemSet(c *gin.Context) {
 		if item.MemoryLimit.Unit == "kb" {
 			memoryLimit /= 1024
 		}
-		problem := model.Problem{
+		problem := entity.Problem{
 			Title:        item.Title,
-			Description:  model.NullString{sql.NullString{item.Description, true}},
-			Input:        model.NullString{sql.NullString{item.Input, true}},
-			Output:       model.NullString{sql.NullString{item.Output, true}},
-			SampleInput:  model.NullString{sql.NullString{item.SampleInput, true}},
-			SampleOutput: model.NullString{sql.NullString{item.SampleOutput, true}},
-			Hint:         model.NullString{sql.NullString{item.Hint, true}},
+			Description:  utils.RelativeNullString(null.StringFrom(item.Description)),
+			Input:        utils.RelativeNullString(null.StringFrom(item.Description)),
+			Output:       utils.RelativeNullString(null.StringFrom(item.Description)),
+			SampleInput:  null.StringFrom(item.Description),
+			SampleOutput: null.StringFrom(item.Description),
+			Hint:         utils.RelativeNullString(null.StringFrom(item.Description)),
 			TimeLimit:    timeLimit,
 			MemoryLimit:  memoryLimit,
 		}
-		err := problem.Save()
+		err := ORM.Create(problem).Error
 
 		if err != nil {
 			infos = append(infos, "问题"+problem.Title+"导入失败")
 		} else {
 			infos = append(infos, "问题"+problem.Title+"导入成功")
-			pid := problem.Id
+			pid := problem.ID
 			dataDir, _ := config.Conf.GetValue("project", "datadir")
 			baseDir := dataDir + "/" + strconv.Itoa(pid)
 			err = os.MkdirAll(baseDir, 0777)
@@ -86,33 +90,43 @@ func ImportProblemSet(c *gin.Context) {
 						break
 					}
 				}
-				solution := model.Solution{
-					ProblemId:  problem.Id,
+				solution := entity.Solution{
+					ProblemId:  problem.ID,
 					TeamId:     0,
 					UserId:     user.ID,
 					ContestId:  0,
 					Num:        0,
+					Result:     0,
+					InDate:     time.Now(),
 					IP:         c.ClientIP(),
 					Language:   languageId,
 					CodeLength: len(source.Content),
 				}
-				err := solution.Save()
-				if utils.CheckError(c, err, "保存提交记录失败") != nil {
-					return
+				err = ORM.Create(&solution).Error
+				if err != nil {
+					panic(errors.New("保存提交记录失败"))
 				}
-				sourceCode := model.SourceCode{
-					SolutionId: solution.Id,
+				sourceCode := entity.SourceCode{
+					SolutionId: solution.ID,
 					Source:     source.Content,
 				}
-				err = sourceCode.Save()
-				if utils.CheckError(c, err, "保存代码记录失败") != nil {
-					return
+				err = ORM.Create(&sourceCode).Error
+				if err != nil {
+					panic(errors.New("保存代码记录失败"))
 				}
-
-				// 更新提交状态为等待评判
-				_, err = DB.Exec("update solution set result = 0 where solution_id = ?", solution.Id)
-				utils.Consolelog(err)
-
+				// 将判题任务推入消息队列
+				jsondata, _ := json.Marshal(gin.H{
+					"UserId":       user.ID,
+					"TestrunCount": 0,
+					"SolutionId":   solution.ID,
+					"ProblemId":    solution.ProblemId,
+					"Language":     solution.Language,
+					"TimeLimit":    problem.TimeLimit,
+					"MemoryLimit":  problem.MemoryLimit,
+					"Source":       sourceCode.Source,
+					"InputText":    "",
+				})
+				mq.Publish("oj", "problem", jsondata)
 			}
 		}
 	}

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"ahpuoj/entity"
-	"ahpuoj/model"
 	"ahpuoj/request"
 	"ahpuoj/utils"
 	"net/http"
@@ -101,7 +100,7 @@ func StoreTeam(c *gin.Context) {
 	idStr := strconv.Itoa(user.ID)
 	teamIdStr := strconv.Itoa(team.ID)
 	if user.Role != "admin" {
-		enforcer := model.GetCasbin()
+		enforcer := entity.GetCasbin()
 		enforcer.AddPolicy(idStr, "/api/admin/team/"+teamIdStr+"/users", "POST")
 		enforcer.AddPolicy(idStr, "/api/admin/team/"+teamIdStr, "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/team/"+teamIdStr+"/user/:userid", "DELETE")

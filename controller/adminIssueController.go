@@ -20,6 +20,7 @@ func ToggleIssueStatus(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改主题状态成功",
+		"show":    true,
 	})
 }
 
@@ -34,5 +35,6 @@ func ToggleReplyStatus(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改回复状态成功",
+		"show":    true,
 	})
 }
