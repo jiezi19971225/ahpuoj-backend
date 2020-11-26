@@ -101,7 +101,6 @@ func FixPermission(c *gin.Context) {
 	for _, contest := range contests {
 		idStr := strconv.Itoa(contest.UserId)
 		contestIdStr := strconv.Itoa(contest.ContestId)
-		DB.Select(&teams, "select contest.id as contest_id,contest.user_id from contest inner join user on contest.user_id = user.id inner join role on user.role_id = role.id where role.name = 'secondaryadmin'")
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr, "PUT")
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr, "DELETE")
 		enforcer.AddPolicy(idStr, "/api/admin/contest/"+contestIdStr+"/status", "PUT")

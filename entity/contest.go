@@ -9,8 +9,8 @@ import (
 type Contest struct {
 	ID          int            `json:"id"`
 	Name        string         `json:"name"`
-	StartTime   time.Time      `json:"start_time"`
 	EndTime     time.Time      `json:"end_time"`
+	StartTime   time.Time      `json:"start_time"`
 	Description null.String    `json:"description"`
 	Defunct     int            `json:"defunct"`
 	Private     int            `json:"private"`

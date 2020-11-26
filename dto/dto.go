@@ -73,7 +73,9 @@ type ProblemListItemDto struct {
 
 type ContestInfoDto struct {
 	entity.Contest
-	Status int `json:"status"`
+	StartTime utils.JSONDateTime `json:"start_time"`
+	EndTime   utils.JSONDateTime `json:"end_time"`
+	Status    int                `json:"status"`
 }
 
 type SolutionInfoDto struct {

@@ -83,6 +83,7 @@ func Register(c *gin.Context) {
 		Email:    null.StringFrom(req.Email),
 		Password: hashedPassword,
 		Passsalt: salt,
+		RoleId:   1,
 	}
 	err = ORM.Create(&user).Error
 	if utils.CheckError(c, err, "注册失败，邮箱/用户名/昵称可能已被注册") != nil {

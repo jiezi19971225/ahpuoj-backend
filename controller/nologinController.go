@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -21,13 +22,7 @@ func NologinGetNewList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 
-	var user dto.UserWithRoleDto
-	user, loggedIn := GetUserInstance(c)
-
-	query := ORM.Model(entity.New{})
-	if !(loggedIn && user.Role != "user") {
-		query.Where(" defunct = 0 ")
-	}
+	query := ORM.Model(entity.New{}).Where("defunct=0")
 
 	var total int64
 	query.Count(&total)
@@ -49,15 +44,14 @@ func NologinGetNewList(c *gin.Context) {
 // 访客获取问题列表的接口
 func NologinGetProblemList(c *gin.Context) {
 
-	var user dto.UserWithRoleDto
-	user, loggedIn := GetUserInstance(c)
+	_, loggedIn := GetUserInstance(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	param := c.Query("param")
 	level := c.Query("level")
 	tagId := c.Query("tag_id")
 
-	query := ORM.Model(entity.Problem{}).Preload("Tags").Joins("left join problem_tag on problem.id = problem_tag.problem_id")
+	query := ORM.Model(entity.Problem{}).Preload("Tags").Joins("left join problem_tag on problem.id = problem_tag.problem_id").Where("problem.defunct=0")
 	if len(param) > 0 {
 		_, err := strconv.Atoi(param)
 		if err != nil {
@@ -73,10 +67,6 @@ func NologinGetProblemList(c *gin.Context) {
 		query.Where("problem.level = ?", level)
 	}
 
-	// 非管理员无法查看隐藏的题目
-	if !(loggedIn && user.Role != "user") {
-		query.Where("problem.defunct=0")
-	}
 	query.Group("problem.id")
 	query.Order("problem.id desc")
 	problems := []entity.Problem{}
@@ -101,19 +91,11 @@ func NologinGetProblemList(c *gin.Context) {
 // 访客获取竞赛列表的接口
 func NologinGetContestList(c *gin.Context) {
 
-	var user dto.UserWithRoleDto
-
-	user, loggedIn := GetUserInstance(c)
-
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	param := c.Query("param")
 
-	query := ORM.Model(entity.Contest{})
-	// 非管理员无法查看隐藏的竞赛
-	if !(loggedIn && user.Role != "user") {
-		query.Where("defunct=0")
-	}
+	query := ORM.Model(entity.Contest{}).Where("defunct=0")
 	if len(param) > 0 {
 		query.Where("name like", "%"+param+"%")
 	}
@@ -130,10 +112,11 @@ func NologinGetContestList(c *gin.Context) {
 	results := []dto.ContestInfoDto{}
 
 	for _, contest := range contests {
-
 		results = append(results, dto.ContestInfoDto{
-			Contest: contest,
-			Status:  contestService.CalcStatus(&contest),
+			Contest:   contest,
+			StartTime: utils.JSONDateTime(contest.StartTime),
+			EndTime:   utils.JSONDateTime(contest.EndTime),
+			Status:    contestService.CalcStatus(&contest),
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -277,7 +260,6 @@ func NologinGetSolution(c *gin.Context) {
 	})
 }
 
-//
 // 获取全部标签的接口
 func NologinGetAllTags(c *gin.Context) {
 	tags := []entity.Tag{}
@@ -337,93 +319,85 @@ func NologinGetProblem(c *gin.Context) {
 	}
 }
 
-//
 // 获取竞赛作业问题信息的接口
-//func NologinGetContestProblem(c *gin.Context) {
-//	var err error
-//	var user dto.UserWithRoleDto
-//	user, loggedIn := GetUserInstance(c)
-//	cid, _ := strconv.Atoi(c.Param("id"))
-//	num, _ := strconv.Atoi(c.Param("num"))
-//	var contest entity.Contest
-//
-//	// 非管理员
-//	query := ORM.Model(entity.Contest{})
-//	if !(loggedIn && user.Role != "user") {
-//		query.Where("defunct = 0")
-//		err = DB.Get(&contest, "select * from contest where id = ? and is_deleted = 0", cid)
-//	}
-//	err = query.First(&contest,cid).Error
-//	if err != nil{
-//		panic(err)
-//	}
-//
-//	var problem model.Problem
-//	contest.CalcStatus()
-//	seeable := true
-//	reason := ""
-//
-//	if loggedIn {
-//		// 不是管理员
-//		if user.Role == "user" {
-//			// 如果竞赛作业尚未开始，题目不可见
-//			if contest.Status == 1 {
-//				seeable = false
-//				reason = "竞赛尚未开始，题目不可见"
-//			} else if contest.Status == 3 { // 如果竞赛作业已经结束，题目可见
-//			} else { // 否则判断竞赛是否私有，私有判断是否有权限
-//				if contest.Private == 1 {
-//					var temp int
-//					DB.Get(&temp, "select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.Id, user.ID)
-//					if temp == 0 {
-//						seeable = false
-//						reason = "对不起，你没有参加此次竞赛的权限"
-//					}
-//				}
-//			}
-//		}
-//	} else { // 游客可以查看已经结束的竞赛的题目
-//		if contest.Status == 1 {
-//			seeable = false
-//			reason = "竞赛尚未开始，题目不可见"
-//		} else if contest.Status == 3 { // 如果竞赛作业已经结束，题目可见
-//		} else {
-//			if contest.Private == 1 { // 私有的竞赛作业无法查看
-//				seeable = false
-//				reason = "对不起，你没有参加此次竞赛的权限"
-//			}
-//		}
-//	}
-//	if seeable {
-//		err = DB.Get(&problem, `select problem.* from contest_problem inner join problem on contest_problem.problem_id = problem.id
-//		where  contest_problem.contest_id= ? and contest_problem.num = ?`, cid, num)
-//		var contestSubmit, contestAccepted int
-//		// 处理提交和通过 只显示竞赛作业中的提交和通过 单人通过多次只算一次
-//		err = DB.Get(&contestSubmit, `select count(1) from solution where contest_id =  ? and num = ?`, cid, num)
-//		err = DB.Get(&contestAccepted, `select count(1)  from (select count(1) from solution where contest_id =  ? and num = ? and result = 4 group by user_id) T`, cid, num)
-//		problem.Submit = contestSubmit
-//		problem.Accepted = contestAccepted
-//	}
-//
-//	if utils.CheckError(c, err, "问题不存在") != nil {
-//		return
-//	}
-//
-//	if seeable {
-//		c.JSON(http.StatusOK, gin.H{
-//			"message": "数据获取成功",
-//			"seeable": seeable,
-//			"problem": problem,
-//		})
-//	} else {
-//		c.JSON(http.StatusOK, gin.H{
-//			"message": "数据获取成功",
-//			"seeable": seeable,
-//			"reason":  reason,
-//		})
-//	}
-//}
-//
+func NologinGetContestProblem(c *gin.Context) {
+	var err error
+	var user dto.UserWithRoleDto
+	user, loggedIn := GetUserInstance(c)
+	cid, _ := strconv.Atoi(c.Param("id"))
+	num, _ := strconv.Atoi(c.Param("num"))
+	var contest entity.Contest
+
+	// 非管理员
+	query := ORM.Model(entity.Contest{})
+	if !(loggedIn && user.Role != "user") {
+		query.Where("defunct = 0")
+	}
+	err = query.First(&contest, cid).Error
+	if err != nil {
+		panic(err)
+	}
+
+	var problem entity.Problem
+	contestStatus := contestService.CalcStatus(&contest)
+	seeable := true
+	reason := ""
+
+	if loggedIn {
+		// 不是管理员
+		if user.Role == "user" {
+			// 如果竞赛作业尚未开始，题目不可见
+			if contestStatus == constant.CONTEST_NOT_START {
+				seeable = false
+				reason = "竞赛尚未开始，题目不可见"
+			} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，题目可见
+			} else { // 否则判断竞赛是否私有，私有判断是否有权限
+				if contest.Private == 1 {
+					var temp int
+					ORM.Raw("select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.ID, user.ID).Scan(&temp)
+					if temp == 0 {
+						seeable = false
+						reason = "对不起，你没有参加此次竞赛的权限"
+					}
+				}
+			}
+		}
+	} else { // 游客可以查看已经结束的竞赛的题目
+		if contestStatus == constant.CONTEST_NOT_START {
+			seeable = false
+			reason = "竞赛尚未开始，题目不可见"
+		} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，题目可见
+		} else {
+			if contest.Private == 1 { // 私有的竞赛作业无法查看
+				seeable = false
+				reason = "对不起，你没有参加此次竞赛的权限"
+			}
+		}
+	}
+
+	if !seeable {
+		panic(errors.New(reason))
+	}
+
+	err = ORM.Model(entity.Problem{}).Joins("inner join contest_problem on contest_problem.problem_id = problem.id").Where("contest_problem.contest_id= ?", cid).
+		Where("contest_problem.num = ?", num).First(&problem).Error
+	if err != nil {
+		panic(err)
+	}
+	var contestSubmit, contestAccepted int
+	// 处理提交和通过 只显示竞赛作业中的提交和通过 单人通过多次只算一次
+	ORM.Raw(`select count(1) from solution where contest_id =  ? and num = ?`, cid, num).Scan(&contestSubmit)
+	ORM.Raw(`select count(1)  from (select count(1) from solution where contest_id =  ? and num = ? and result = 4 group by user_id) T`, cid, num).Scan(&contestAccepted)
+	problem.Submit = contestSubmit
+	problem.Accepted = contestAccepted
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "数据获取成功",
+		"seeable": seeable,
+		"problem": problem,
+	})
+}
+
 // 获取竞赛信息的接口
 func NologinGetContest(c *gin.Context) {
 	var err error
@@ -442,7 +416,9 @@ func NologinGetContest(c *gin.Context) {
 	}
 
 	contestInfo := dto.ContestInfoDto{
-		Contest: contest,
+		Contest:   contest,
+		StartTime: utils.JSONDateTime(contest.StartTime),
+		EndTime:   utils.JSONDateTime(contest.EndTime),
 	}
 	contestInfo.Status = contestService.CalcStatus(&contest)
 	seeable := true
@@ -483,11 +459,11 @@ func NologinGetContest(c *gin.Context) {
 
 	contest.Problems = nil
 	result := struct {
-		entity.Contest
+		dto.ContestInfoDto
 		ProblemInfos []dto.ProblemListItemDto `json:"probleminfos"`
 	}{
-		Contest:      contest,
-		ProblemInfos: problemList,
+		ContestInfoDto: contestInfo,
+		ProblemInfos:   problemList,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -498,464 +474,420 @@ func NologinGetContest(c *gin.Context) {
 	})
 }
 
-//
-//// 获取竞赛作业排名的接口
-//func NologinGetContestRankList(c *gin.Context) {
-//	var user dto.UserWithRoleDto
-//	user, loggedIn := GetUserInstance(c)
-//	var contest model.Contest
-//	id, _ := strconv.Atoi(c.Param("id"))
-//
-//	err := DB.Get(&contest, "select * from contest where id = ? and is_deleted = 0", id)
-//
-//	if utils.CheckError(c, err, "竞赛&作业不存在") != nil {
-//		return
-//	}
-//
-//	contest.CalcStatus()
-//	seeable := true
-//	reason := ""
-//
-//	if loggedIn {
-//		// 不是管理员
-//		if user.Role == "user" {
-//			// 如果竞赛作业尚未开始，排名不可见
-//			if contest.Status == 1 {
-//				seeable = false
-//				reason = "竞赛尚未开始，排名不可见"
-//			} else if contest.Status == 3 { // 如果竞赛作业已经结束，排名可见
-//			} else { // 否则判断竞赛是否私有，私有判断是否有权限
-//				if contest.Private == 1 {
-//					var temp int
-//					DB.Get(&temp, "select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.Id, user.ID)
-//					if temp == 0 {
-//						seeable = false
-//						reason = "对不起，你没有参加此次竞赛的权限"
-//					}
-//				}
-//			}
-//		}
-//	} else { // 游客可以查看已经结束的竞赛的题目列表
-//		if contest.Status == 1 {
-//			seeable = false
-//			reason = "竞赛尚未开始，排名不可见"
-//		} else if contest.Status == 3 { // 如果竞赛作业已经结束，题目可见
-//		} else {
-//			if contest.Private == 1 { // 私有的竞赛作业无法查看
-//				seeable = false
-//				reason = "对不起，你没有参加此次竞赛的权限"
-//			}
-//		}
-//	}
-//
-//	var userRankInfoList model.UserRankInfoList
-//	var problemCount int
-//	if seeable {
-//		// 获得竞赛作业题目总数
-//		DB.Get(&problemCount, "select count(1) from contest_problem where contest_id = ?", id)
-//
-//		rows, _ := DB.Queryx(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar,r.name from
-//		solution s inner join user u on s.user_id = u.id
-//		inner join role r on u.role_id = r.id
-//		where s.contest_id = ? order by s.user_id, s.in_date asc`, id)
-//
-//		lastUserId := 0
-//		var userRankInfo model.UserRankInfo
-//
-//		for rows.Next() {
-//			var rankItem model.RankItem
-//			rows.StructScan(&rankItem)
-//			// 忽略管理员的提交
-//			if rankItem.UserRole == "admin" {
-//				continue
-//			}
-//
-//			// 如果是新的用户的数据
-//			if rankItem.UserId != lastUserId {
-//				if userRankInfo.User.Id != 0 {
-//					userRankInfoList = append(userRankInfoList, userRankInfo)
-//				}
-//				userRankInfo = model.UserRankInfo{
-//					Solved:  0,
-//					Time:    0,
-//					WaCount: make([]int, problemCount),
-//					AcTime:  make([]int, problemCount),
-//					User: struct {
-//						Id       int    `json:"id"`
-//						Username string `json:"username"`
-//						Nick     string `json:"nick"`
-//					}{
-//						Id:       rankItem.UserId,
-//						Username: rankItem.Username,
-//						Nick:     rankItem.Nick,
-//					},
-//				}
-//			}
-//			userRankInfo.Add(rankItem, contest.StartTime)
-//			lastUserId = rankItem.UserId
-//		}
-//		if userRankInfo.User.Id != 0 {
-//			userRankInfoList = append(userRankInfoList, userRankInfo)
-//		}
-//	}
-//	sort.Sort(userRankInfoList)
-//	c.JSON(http.StatusOK, gin.H{
-//		"message":  "数据获取成功",
-//		"seeable":  seeable,
-//		"reason":   reason,
-//		"ranklist": userRankInfoList,
-//		"contest": struct {
-//			ProblemCount int    `json:"problem_count"`
-//			Name         string `json:"name"`
-//			Id           int    `json:"id"`
-//		}{
-//			ProblemCount: problemCount,
-//			Name:         contest.Name,
-//			Id:           contest.Id,
-//		},
-//	})
-//}
-//
-//// 获取竞赛作业团队排名的接口
-//func NologinGetContestTeamRankList(c *gin.Context) {
-//	var user dto.UserWithRoleDto
-//	user, loggedIn := GetUserInstance(c)
-//	var contest model.Contest
-//	id, _ := strconv.Atoi(c.Param("id"))
-//
-//	err := DB.Get(&contest, "select * from contest where id = ? and is_deleted = 0", id)
-//
-//	if utils.CheckError(c, err, "竞赛&作业不存在") != nil {
-//		return
-//	}
-//
-//	if contest.TeamMode != 1 {
-//		c.AbortWithStatusJSON(400, gin.H{
-//			"message": "竞赛&作业不是团队模式",
-//		})
-//		return
-//	}
-//
-//	contest.CalcStatus()
-//	seeable := true
-//	reason := ""
-//
-//	if loggedIn {
-//		// 不是管理员
-//		if user.Role == "user" {
-//			// 如果竞赛作业尚未开始，排名不可见
-//			if contest.Status == 1 {
-//				seeable = false
-//				reason = "竞赛尚未开始，题目不可见"
-//			} else if contest.Status == 3 { // 如果竞赛作业已经结束，排名可见
-//			} else { // 否则判断竞赛是否私有，私有判断是否有权限
-//				if contest.Private == 1 {
-//					var temp int
-//					DB.Get(&temp, "select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.Id, user.ID)
-//					if temp == 0 {
-//						seeable = false
-//						reason = "对不起，你没有参加此次竞赛的权限"
-//					}
-//				}
-//			}
-//		}
-//	} else { // 游客可以查看已经结束的竞赛的题目列表
-//		if contest.Status == 1 {
-//			seeable = false
-//			reason = "竞赛尚未开始，排名不可见"
-//		} else if contest.Status == 3 { // 如果竞赛作业已经结束，题目可见
-//		} else {
-//			if contest.Private == 1 { // 私有的竞赛作业无法查看
-//				seeable = false
-//				reason = "对不起，你没有参加此次竞赛的权限"
-//			}
-//		}
-//	}
-//
-//	// 按照team_id来排序
-//	var userRankInfoList model.UserRankSortByTeam
-//	var problemCount int
-//	if seeable {
-//		// 获得竞赛作业题目总数
-//		DB.Get(&problemCount, "select count(1) from contest_problem where contest_id = ?", id)
-//		rows, _ := DB.Queryx(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar,r.name from
-//		solution s inner join user u on s.user_id = u.id inner join role r on u.role_id = r.id where s.contest_id = ? order by s.user_id, s.in_date asc`, id)
-//
-//		lastUserId := 0
-//		var userRankInfo model.UserRankInfo
-//
-//		for rows.Next() {
-//			var rankItem model.RankItem
-//			rows.StructScan(&rankItem)
-//			// 忽略管理员的提交
-//			if rankItem.UserRole == "admin" {
-//				continue
-//			}
-//			// 如果是新的用户的数据
-//			if rankItem.UserId != lastUserId {
-//				if userRankInfo.User.Id != 0 {
-//					userRankInfoList = append(userRankInfoList, userRankInfo)
-//				}
-//				userRankInfo = model.UserRankInfo{
-//					Solved:  0,
-//					Time:    0,
-//					WaCount: make([]int, problemCount),
-//					AcTime:  make([]int, problemCount),
-//					TeamId:  rankItem.TeamId,
-//					User: struct {
-//						Id       int    `json:"id"`
-//						Username string `json:"username"`
-//						Nick     string `json:"nick"`
-//					}{
-//						Id:       rankItem.UserId,
-//						Username: rankItem.Username,
-//						Nick:     rankItem.Nick,
-//					},
-//				}
-//			}
-//			userRankInfo.TeamId = rankItem.TeamId
-//			userRankInfo.Add(rankItem, contest.StartTime)
-//			lastUserId = rankItem.UserId
-//		}
-//		userRankInfoList = append(userRankInfoList, userRankInfo)
-//	}
-//	sort.Sort(userRankInfoList)
-//
-//	var teamRankInfoList model.TeamRankInfoList
-//
-//	// 获取全部参赛队伍数据
-//	rows, _ := DB.Queryx(`select team.* from
-//	contest_team inner join team on contest_team.team_id = team.id
-//	where team.is_deleted = 0 and contest_team.contest_id = ? order by team.id asc`, contest.Id)
-//	for rows.Next() {
-//		var team model.Team
-//		rows.StructScan(&team)
-//		var teamRankInfo = model.TeamRankInfo{
-//			Solved:  0,
-//			Time:    0,
-//			WaCount: make([]int, problemCount),
-//			AcTime:  make([]int, problemCount),
-//			AcCount: make([]int, problemCount),
-//			Team: struct {
-//				Id   int    `json:"id"`
-//				Name string `json:"name"`
-//			}{
-//				Id:   team.Id,
-//				Name: team.Name,
-//			},
-//		}
-//		teamRankInfoList = append(teamRankInfoList, teamRankInfo)
-//	}
-//
-//	// team排名信息和个人信息都是按照teamid递增排列的  o(n)方式来统计
-//
-//	userCount := len(userRankInfoList)
-//	cnt := 0
-//
-//out:
-//	for k, v := range teamRankInfoList {
-//		// 如果用户信息已经统计完 break
-//		if cnt >= userCount {
-//			break
-//		}
-//		utils.Consolelog(v.Team.Id, userRankInfoList[cnt].TeamId)
-//		// 如果个人信息的teamid大于当前team的id continue
-//		if userRankInfoList[cnt].TeamId > v.Team.Id {
-//			continue
-//		}
-//		for userRankInfoList[cnt].TeamId == v.Team.Id {
-//			teamRankInfoList[k].Add(userRankInfoList[cnt])
-//			cnt++
-//			if cnt >= userCount {
-//				break out
-//			}
-//		}
-//	}
-//	sort.Sort(teamRankInfoList)
-//	c.JSON(http.StatusOK, gin.H{
-//		"message":      "数据获取成功",
-//		"seeable":      seeable,
-//		"reason":       reason,
-//		"teamranklist": teamRankInfoList,
-//		"contest": struct {
-//			ProblemCount int    `json:"problem_count"`
-//			Name         string `json:"name"`
-//			Id           int    `json:"id"`
-//		}{
-//			ProblemCount: problemCount,
-//			Name:         contest.Name,
-//			Id:           contest.Id,
-//		},
-//	})
-//}
-//
-// 访客获取竞赛列表的接口
-//func NologinGetSeriesList(c *gin.Context) {
-//
-//	var user dto.UserWithRoleDto
-//
-//	user, loggedIn := GetUserInstance(c)
-//
-//	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-//	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-//	param := c.Query("param")
-//
-//	if len(param) > 0 {
-//		query
-//		whereString += " and name like '%" + param + "%' "
-//	}
-//	// 非管理员无法查看隐藏的竞赛
-//	if !(loggedIn && user.Role != "user") {
-//		whereString += " and defunct = 0 "
-//	}
-//
-//	whereString += " order by id desc"
-//	rows, total, err := model.Paginate(&page, &perpage, "series", []string{"*"}, whereString)
-//	if utils.CheckError(c, err, "数据获取失败") != nil {
-//		return
-//	}
-//
-//	serieses := []model.Series{}
-//	for rows.Next() {
-//		var series model.Series
-//		rows.StructScan(&series)
-//		serieses = append(serieses, series)
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{
-//		"message": "数据获取成功",
-//		"total":   total,
-//		"page":    page,
-//		"perpage": perpage,
-//		"data":    serieses,
-//	})
-//}
+// 获取竞赛作业排名的接口
+func NologinGetContestRankList(c *gin.Context) {
+	var user dto.UserWithRoleDto
+	user, loggedIn := GetUserInstance(c)
+	var contest entity.Contest
+	id, _ := strconv.Atoi(c.Param("id"))
 
-//
-//// 访客获取系列赛信息的接口  真难啊 写吐了都/(ㄒoㄒ)/~~
-//func NologinGetSeries(c *gin.Context) {
-//	var err error
-//	var user dto.UserWithRoleDto
-//	user, loggedIn := GetUserInstance(c)
-//	var series model.Series
-//	id, _ := strconv.Atoi(c.Param("id"))
-//
-//	if !(loggedIn && user.Role != "user") {
-//		err = DB.Get(&series, "select * from series where id = ? and defunct = 0", id)
-//	} else {
-//		err = DB.Get(&series, "select * from series where id = ?", id)
-//	}
-//
-//	if utils.CheckError(c, err, "竞赛&作业不存在") != nil {
-//		return
-//	}
-//
-//	series.AttachContestInfo()
-//	// 取得系列赛包含的竞赛作业数据
-//	rows, err := DB.Queryx("select contest.* from contest inner join contest_series on contest_series.contest_id = contest.id where contest_series.series_id = ? and contest.team_mode = ? and contest.is_deleted = 0 and contest.defunct = 0", id, series.TeamMode)
-//	if utils.CheckError(c, err, "数据库查询失败") != nil {
-//		return
-//	}
-//	contestList := []model.Contest{}
-//	contestStrList := ""
-//	for rows.Next() {
-//		var contest model.Contest
-//		rows.StructScan(&contest)
-//		contest.CalcStatus()
-//		contestList = append(contestList, contest)
-//		if len(contestStrList) > 0 {
-//			contestStrList += "," + strconv.Itoa(contest.Id)
-//		} else {
-//			contestStrList += strconv.Itoa(contest.Id)
-//		}
-//	}
-//
-//	var contestCount int
-//	var problemCount int
-//
-//	var userSeriesRankInfo model.UserSeriesRankInfo
-//	var userSeriesRankInfoList model.UserSeriesRankInfoList
-//
-//	DB.Get(&contestCount, "select count(*) from contest_series inner join contest on contest_series.contest_id = contest.id where contest.is_deleted = 0 and contest.defunct = 0 and series_id = ? and contest.team_mode = ?", id, series.TeamMode)
-//	DB.Get(&problemCount, "select count(*) from contest_series inner join contest_problem on contest_series.contest_id = contest_problem.contest_id inner join contest on contest_series.contest_id = contest.id where contest.is_deleted = 0 and contest.defunct = 0 and series_id = ? and contest.team_mode = ?", id, series.TeamMode)
-//
-//	// 如果竞赛作业数量为0，不进行后续处理
-//	if contestCount == 0 {
-//		c.JSON(http.StatusOK, gin.H{
-//			"message":      "数据获取成功",
-//			"series":       series,
-//			"userranklist": userSeriesRankInfoList,
-//		})
-//		return
-//	}
-//
-//	// 个人模式排名汇总,取得系列赛全部的提交记录
-//	rows, err = DB.Queryx(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar,r.name from
-//	solution s inner join user u on s.user_id = u.id
-//	inner join role r on u.role_id = r.id
-//	where s.contest_id in (` + contestStrList + `) order by s.user_id, s.in_date asc`)
-//	lastUserId := 0
-//	if utils.CheckError(c, err, "err") != nil {
-//		return
-//	}
-//
-//	for rows.Next() {
-//		var rankItem model.RankItem
-//		var contest model.Contest
-//
-//		rows.StructScan(&rankItem)
-//		// 获取当前提交的竞赛信息
-//		for _, c := range contestList {
-//			if rankItem.ContestId == c.Id {
-//				contest = c
-//				// break
-//			}
-//		}
-//
-//		// 忽略管理员的提交
-//		if rankItem.UserRole == "admin" {
-//			continue
-//		}
-//
-//		// 如果是新的用户的数据
-//		if rankItem.UserId != lastUserId {
-//			if userSeriesRankInfo.User.Id != 0 {
-//				userSeriesRankInfoList = append(userSeriesRankInfoList, userSeriesRankInfo)
-//			}
-//			userSeriesRankInfo = model.UserSeriesRankInfo{
-//				Solved:  make(map[int]int, contestCount),
-//				Time:    make(map[int]int, contestCount),
-//				WaCount: make(map[int][]int, problemCount),
-//				AcTime:  make(map[int][]int, problemCount),
-//				User: struct {
-//					Id       int    `json:"id"`
-//					Username string `json:"username"`
-//					Nick     string `json:"nick"`
-//				}{
-//					Id:       rankItem.UserId,
-//					Username: rankItem.Username,
-//					Nick:     rankItem.Nick,
-//				},
-//			}
-//		}
-//		userSeriesRankInfo.Add(rankItem, contest.Id, contest.StartTime, problemCount)
-//		lastUserId = rankItem.UserId
-//	}
-//	if userSeriesRankInfo.User.Id != 0 {
-//		userSeriesRankInfoList = append(userSeriesRankInfoList, userSeriesRankInfo)
-//	}
-//
-//	// todolist 处理团队系列赛排名 这部分太复杂了 先搁置
-//
-//	// 数据的排序交给前端处理，菜鸡不会用go处理这种排序(⊙﹏⊙)b
-//
-//	c.JSON(http.StatusOK, gin.H{
-//		"message":      "数据获取成功",
-//		"series":       series,
-//		"userranklist": userSeriesRankInfoList,
-//	})
-//}
-//
+	err := ORM.Model(entity.Contest{}).First(&contest, id).Error
+	if err != nil {
+		panic(err)
+	}
+
+	contestStatus := contestService.CalcStatus(&contest)
+	seeable := true
+	reason := ""
+
+	if loggedIn {
+		// 不是管理员
+		if user.Role == "user" {
+			// 如果竞赛作业尚未开始，排名不可见
+			if contestStatus == constant.CONTEST_NOT_START {
+				seeable = false
+				reason = "竞赛尚未开始，排名不可见"
+			} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，排名可见
+			} else { // 否则判断竞赛是否私有，私有判断是否有权限
+				if contest.Private == 1 {
+					var temp int
+					ORM.Raw("select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.ID, user.ID).Scan(&temp)
+					if temp == 0 {
+						seeable = false
+						reason = "对不起，你没有参加此次竞赛的权限"
+					}
+				}
+			}
+		}
+	} else { // 游客可以查看已经结束的竞赛的题目列表
+		if contestStatus == constant.CONTEST_NOT_START {
+			seeable = false
+			reason = "竞赛尚未开始，排名不可见"
+		} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，题目可见
+		} else {
+			if contest.Private == 1 { // 私有的竞赛作业无法查看
+				seeable = false
+				reason = "对不起，你没有参加此次竞赛的权限"
+			}
+		}
+	}
+
+	userRankInfoList := dto.UserRankInfoList{}
+	var problemCount int64
+	if seeable {
+		// 获得竞赛作业题目总数
+		ORM.Model(entity.ContestProblem{}).Where("contest_id = ?", id).Count(&problemCount)
+
+		rankItems := []dto.RankItem{}
+		ORM.Raw(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar as user_avatar,r.name as user_role from
+		solution s inner join user u on s.user_id = u.id
+		inner join role r on u.role_id = r.id
+		where s.contest_id = ? order by s.user_id, s.in_date asc`, id).Find(&rankItems)
+
+		lastUserId := 0
+		var userRankInfo dto.UserRankInfo
+
+		for _, rankItem := range rankItems {
+			// 忽略管理员的提交
+			if rankItem.UserRole != "user" {
+				continue
+			}
+			// 如果是新的用户的数据
+			if rankItem.UserId != lastUserId {
+				if userRankInfo.User.Id != 0 {
+					userRankInfoList = append(userRankInfoList, userRankInfo)
+				}
+				userRankInfo = dto.UserRankInfo{
+					Solved:  0,
+					Time:    0,
+					WaCount: make([]int, problemCount),
+					AcTime:  make([]int, problemCount),
+					User: struct {
+						Id       int    `json:"id"`
+						Username string `json:"username"`
+						Nick     string `json:"nick"`
+					}{
+						Id:       rankItem.UserId,
+						Username: rankItem.Username,
+						Nick:     rankItem.Nick,
+					},
+				}
+			}
+			userRankInfo.Add(rankItem, contest.StartTime)
+			lastUserId = rankItem.UserId
+		}
+		if userRankInfo.User.Id != 0 {
+			userRankInfoList = append(userRankInfoList, userRankInfo)
+		}
+	}
+	sort.Sort(userRankInfoList)
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "数据获取成功",
+		"seeable":  seeable,
+		"reason":   reason,
+		"ranklist": userRankInfoList,
+		"contest": struct {
+			ProblemCount int64  `json:"problem_count"`
+			Name         string `json:"name"`
+			Id           int    `json:"id"`
+		}{
+			ProblemCount: problemCount,
+			Name:         contest.Name,
+			Id:           contest.ID,
+		},
+	})
+}
+
+// 获取竞赛作业团队排名的接口
+func NologinGetContestTeamRankList(c *gin.Context) {
+	var user dto.UserWithRoleDto
+	user, loggedIn := GetUserInstance(c)
+	var contest entity.Contest
+	id, _ := strconv.Atoi(c.Param("id"))
+	err := ORM.Model(entity.Contest{}).First(&contest, id).Error
+	if err != nil {
+		panic(err)
+	}
+	if contest.TeamMode != 1 {
+		panic(errors.New("竞赛&作业不是团队模式"))
+	}
+
+	contestStatus := contestService.CalcStatus(&contest)
+	seeable := true
+	reason := ""
+
+	if loggedIn {
+		// 不是管理员
+		if user.Role == "user" {
+			// 如果竞赛作业尚未开始，排名不可见
+			if contestStatus == constant.CONTEST_NOT_START {
+				seeable = false
+				reason = "竞赛尚未开始，题目不可见"
+			} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，排名可见
+			} else { // 否则判断竞赛是否私有，私有判断是否有权限
+				if contest.Private == 1 {
+					var temp int
+					ORM.Raw("select count(1) from contest_user where contest_user.contest_id = ? and contest_user.user_id = ?", contest.ID, user.ID).Scan(&temp)
+					if temp == 0 {
+						seeable = false
+						reason = "对不起，你没有参加此次竞赛的权限"
+					}
+				}
+			}
+		}
+	} else { // 游客可以查看已经结束的竞赛的题目列表
+		if contestStatus == constant.CONTEST_NOT_START {
+			seeable = false
+			reason = "竞赛尚未开始，排名不可见"
+		} else if contestStatus == constant.CONTEST_FINISH { // 如果竞赛作业已经结束，题目可见
+		} else {
+			if contest.Private == 1 { // 私有的竞赛作业无法查看
+				seeable = false
+				reason = "对不起，你没有参加此次竞赛的权限"
+			}
+		}
+	}
+
+	// 按照team_id来排序
+	var userRankInfoList dto.UserRankSortByTeam
+	var problemCount int
+	if seeable {
+		// 获得竞赛作业题目总数
+		ORM.Raw("select count(1) from contest_problem where contest_id = ?", id).Scan(&problemCount)
+		rankItems := []dto.RankItem{}
+		ORM.Raw(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar,r.name from
+		solution s inner join user u on s.user_id = u.id inner join role r on u.role_id = r.id where s.contest_id = ? order by s.user_id, s.in_date asc`, id).Find(&rankItems)
+
+		lastUserId := 0
+		var userRankInfo dto.UserRankInfo
+
+		for _, rankItem := range rankItems {
+			// 忽略管理员的提交
+			if rankItem.UserRole != "user" {
+				continue
+			}
+			// 如果是新的用户的数据
+			if rankItem.UserId != lastUserId {
+				if userRankInfo.User.Id != 0 {
+					userRankInfoList = append(userRankInfoList, userRankInfo)
+				}
+				userRankInfo = dto.UserRankInfo{
+					Solved:  0,
+					Time:    0,
+					WaCount: make([]int, problemCount),
+					AcTime:  make([]int, problemCount),
+					TeamId:  rankItem.TeamId,
+					User: struct {
+						Id       int    `json:"id"`
+						Username string `json:"username"`
+						Nick     string `json:"nick"`
+					}{
+						Id:       rankItem.UserId,
+						Username: rankItem.Username,
+						Nick:     rankItem.Nick,
+					},
+				}
+			}
+			userRankInfo.TeamId = rankItem.TeamId
+			userRankInfo.Add(rankItem, contest.StartTime)
+			lastUserId = rankItem.UserId
+		}
+		userRankInfoList = append(userRankInfoList, userRankInfo)
+	}
+	sort.Sort(userRankInfoList)
+
+	var teamRankInfoList dto.TeamRankInfoList
+
+	// 获取全部参赛队伍数据
+	teams := []entity.Team{}
+	ORM.Raw(`select team.* from
+	contest_team inner join team on contest_team.team_id = team.id
+	where team.is_deleted = 0 and contest_team.contest_id = ? order by team.id asc`, contest.ID).Find(&teams)
+	for _, team := range teams {
+		var teamRankInfo = dto.TeamRankInfo{
+			Solved:  0,
+			Time:    0,
+			WaCount: make([]int, problemCount),
+			AcTime:  make([]int, problemCount),
+			AcCount: make([]int, problemCount),
+			Team: struct {
+				Id   int    `json:"id"`
+				Name string `json:"name"`
+			}{
+				Id:   team.ID,
+				Name: team.Name,
+			},
+		}
+		teamRankInfoList = append(teamRankInfoList, teamRankInfo)
+	}
+
+	// team排名信息和个人信息都是按照teamid递增排列的  o(n)方式来统计
+
+	userCount := len(userRankInfoList)
+	cnt := 0
+
+out:
+	for k, v := range teamRankInfoList {
+		// 如果用户信息已经统计完 break
+		if cnt >= userCount {
+			break
+		}
+		// 如果个人信息的teamid大于当前team的id continue
+		if userRankInfoList[cnt].TeamId > v.Team.Id {
+			continue
+		}
+		for userRankInfoList[cnt].TeamId == v.Team.Id {
+			teamRankInfoList[k].Add(userRankInfoList[cnt])
+			cnt++
+			if cnt >= userCount {
+				break out
+			}
+		}
+	}
+	sort.Sort(teamRankInfoList)
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "数据获取成功",
+		"seeable":      seeable,
+		"reason":       reason,
+		"teamranklist": teamRankInfoList,
+		"contest": struct {
+			ProblemCount int    `json:"problem_count"`
+			Name         string `json:"name"`
+			Id           int    `json:"id"`
+		}{
+			ProblemCount: problemCount,
+			Name:         contest.Name,
+			Id:           contest.ID,
+		},
+	})
+}
+
+// 访客获取竞赛列表的接口
+func NologinGetSeriesList(c *gin.Context) {
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
+	param := c.Query("param")
+
+	query := ORM.Model(entity.Series{}).Where("defunct=0")
+	if len(param) > 0 {
+		query.Where("name like ?", "%"+param+"%")
+	}
+	var total int64
+	query.Count(&total)
+	serieses := []entity.Series{}
+	err := query.Scopes(Paginate(c)).Order("id desc").Find(&serieses).Error
+	if err != nil {
+		panic(err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "数据获取成功",
+		"total":   total,
+		"page":    page,
+		"perpage": perpage,
+		"data":    serieses,
+	})
+}
+
+// 访客获取系列赛信息的接口
+func NologinGetSeries(c *gin.Context) {
+	var err error
+	var series entity.Series
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	err = ORM.Model(entity.Series{}).Preload("Contests").First(&series, id).Error
+	if err != nil {
+		panic(err)
+	}
+
+	contestIdStrList := []string{}
+	for _, contest := range series.Contests {
+		contestIdStrList = append(contestIdStrList, strconv.Itoa(contest.ID))
+	}
+
+	var contestCount int64
+	var problemCount int64
+
+	var userSeriesRankInfo dto.UserSeriesRankInfo
+	userSeriesRankInfoList := dto.UserSeriesRankInfoList{}
+
+	ORM.Model(entity.Contest{}).Joins("inner join contest_series on contest_series.contest_id = contest.id").Where("contest.defunct = 0").Where("series_id = ?", id).Where("team_mode = ?", series.TeamMode).Count(&contestCount)
+
+	ORM.Model(entity.Contest{}).Joins("inner join contest_series on contest.id = contest_series.contest_id").
+		Joins("inner join contest_problem on contest.id = contest_problem.contest_id").
+		Where("contest.defunct = 0").Where("series_id = ?", id).Where("team_mode = ?", series.TeamMode).Count(&problemCount)
+
+	contestIdStrListStr := strings.Join(contestIdStrList, ",")
+	// 个人模式排名汇总,取得系列赛全部的提交记录
+	rankItems := []dto.RankItem{}
+	ORM.Raw(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar as user_avatar,r.name as user_role from
+	solution s inner join user u on s.user_id = u.id
+	inner join role r on u.role_id = r.id
+	where s.contest_id in (` + contestIdStrListStr + `) order by s.user_id, s.in_date asc`).Find(&rankItems)
+	lastUserId := 0
+
+	for _, rankItem := range rankItems {
+		var contest entity.Contest
+
+		// 获取当前提交的竞赛信息
+		for _, c := range series.Contests {
+			if rankItem.ContestId == c.ID {
+				contest = c
+				// break
+			}
+		}
+
+		// 忽略管理员的提交
+		if rankItem.UserRole == "admin" {
+			continue
+		}
+
+		// 如果是新的用户的数据
+		if rankItem.UserId != lastUserId {
+			if userSeriesRankInfo.User.Id != 0 {
+				userSeriesRankInfoList = append(userSeriesRankInfoList, userSeriesRankInfo)
+			}
+			userSeriesRankInfo = dto.UserSeriesRankInfo{
+				Solved:  make(map[int]int, contestCount),
+				Time:    make(map[int]int, contestCount),
+				WaCount: make(map[int][]int, problemCount),
+				AcTime:  make(map[int][]int, problemCount),
+				User: struct {
+					Id       int    `json:"id"`
+					Username string `json:"username"`
+					Nick     string `json:"nick"`
+				}{
+					Id:       rankItem.UserId,
+					Username: rankItem.Username,
+					Nick:     rankItem.Nick,
+				},
+			}
+		}
+		userSeriesRankInfo.Add(rankItem, contest.ID, contest.StartTime, problemCount)
+		lastUserId = rankItem.UserId
+	}
+	if userSeriesRankInfo.User.Id != 0 {
+		userSeriesRankInfoList = append(userSeriesRankInfoList, userSeriesRankInfo)
+	}
+
+	type Result struct {
+		entity.Series
+		Contestinfos []dto.ContestInfoDto `json:"contestinfos"`
+	}
+	result := Result{
+		Series:       series,
+		Contestinfos: []dto.ContestInfoDto{},
+	}
+
+	for _, contest := range series.Contests {
+		contestStatus := contestService.CalcStatus(&contest)
+		result.Contestinfos = append(result.Contestinfos, dto.ContestInfoDto{
+			Contest:   contest,
+			StartTime: utils.JSONDateTime(contest.StartTime),
+			EndTime:   utils.JSONDateTime(contest.EndTime),
+			Status:    contestStatus,
+		})
+
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "数据获取成功",
+		"series":       result,
+		"userranklist": userSeriesRankInfoList,
+	})
+}
+
 // 获取系统可用语言列表的接口
 func NologinGetLanguageList(c *gin.Context) {
 	numberStr, _ := config.Conf.GetValue("language", "number")

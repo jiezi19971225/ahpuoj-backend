@@ -2,19 +2,16 @@ package controller
 
 import (
 	"ahpuoj/config"
-	mysqlDao "ahpuoj/dao/mysql"
 	"ahpuoj/dao/orm"
 	redisDao "ahpuoj/dao/redis"
 	"ahpuoj/dto"
 	"ahpuoj/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
-	"github.com/jmoiron/sqlx"
 	"gorm.io/gorm"
 	"strconv"
 )
 
-var DB *sqlx.DB
 var ORM *gorm.DB
 var REDIS *redis.Pool
 var RedisCacheLiveTime int
@@ -24,7 +21,6 @@ dao层初始化
 */
 func init() {
 	ORM = orm.ORM
-	DB = mysqlDao.DB
 	REDIS = redisDao.REDIS
 	// 默认1800
 	RedisCacheLiveTime = 1800

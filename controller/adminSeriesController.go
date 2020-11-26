@@ -42,16 +42,15 @@ func IndexSeriesContest(c *gin.Context) {
 	param := c.Query("param")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
-	seriesId, _ := strconv.Atoi(c.Query("id"))
-	query := ORM.Model(entity.Series{
-		ID: seriesId,
-	})
+	seriesId, _ := strconv.Atoi(c.Param("id"))
+	query := ORM.Model(entity.Contest{}).Joins("inner join contest_series on contest.id = contest_series.contest_id").Where("contest_series.series_id = ?", seriesId)
 	if len(param) > 0 {
 		query.Where("contest.name like", "%"+param+"%")
 	}
 	contests := []entity.Contest{}
-	total := query.Association("Contests").Count()
-	err := query.Scopes(utils.Paginate(c)).Order("contest.id desc").Association("Contests").Find(&contests).Error
+	var total int64
+	query.Count(&total)
+	err := query.Scopes(utils.Paginate(c)).Order("contest.id desc").Find(&contests).Error
 
 	if err != nil {
 		panic(err)
