@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/guregu/null.v4"
-	"log"
 	"time"
 )
 
@@ -23,7 +22,6 @@ func (t JSONDateTime) MarshalJSON() ([]byte, error) {
 }
 
 func (rns RelativeNullString) MarshalJSON() ([]byte, error) {
-	log.Print("rns", rns)
 	ans, _ := json.Marshal(ConvertTextImgUrl(rns.String))
 	return []byte(ans), nil
 }

@@ -2,6 +2,7 @@ package dto
 
 import (
 	"ahpuoj/entity"
+	"ahpuoj/utils"
 	"gopkg.in/guregu/null.v4"
 )
 
@@ -86,19 +87,23 @@ type SolutionInfoDto struct {
 
 type IssueInfoDto struct {
 	entity.Issue
-	Username     string      `json:"username"`
-	Nick         string      `json:"nick"`
-	UserAvatar   string      `json:"avatar"`
-	ReplyCount   int         `json:"reply_count"`
-	ProblemTitle null.String `json:"ptitle"`
+	CreatedAt    utils.JSONDateTime `json:"created_at"`
+	UpdatedAt    utils.JSONDateTime `json:"updated_at"`
+	Username     string             `json:"username"`
+	Nick         string             `json:"nick"`
+	UserAvatar   string             `json:"avatar"`
+	ReplyCount   int                `json:"reply_count"`
+	ProblemTitle null.String        `json:"ptitle"`
 }
 
 type ReplyInfoDto struct {
 	entity.Reply
-	Username      string         `json:"username"`
-	ReplyUserNick string         `json:"rnick"`
-	Nick          string         `json:"user_nick"`
-	Avatar        string         `json:"avatar"`
-	ReplyCount    int            `json:"reply_count"`
-	SubReplys     []ReplyInfoDto `json:"sub_replys"`
+	CreatedAt     utils.JSONDateTime `json:"created_at"`
+	UpdatedAt     utils.JSONDateTime `json:"updated_at"`
+	Username      string             `json:"username"`
+	ReplyUserNick string             `json:"rnick"`
+	Nick          string             `json:"user_nick"`
+	Avatar        string             `json:"avatar"`
+	ReplyCount    int                `json:"reply_count"`
+	SubReplys     []ReplyInfoDto     `json:"sub_replys"`
 }

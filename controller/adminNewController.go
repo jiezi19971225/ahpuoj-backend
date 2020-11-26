@@ -132,8 +132,7 @@ func ToggleNewTopStatus(c *gin.Context) {
 	} else {
 		newtop = 0
 	}
-	new.Top = newtop
-	err = ORM.Save(&new).Error
+	err = ORM.Model(&new).Update("top", newtop).Error
 	if err != nil {
 		panic(err)
 	}
