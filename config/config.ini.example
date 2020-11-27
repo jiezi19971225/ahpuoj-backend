@@ -1,6 +1,6 @@
 [project]
-datadir=../docker/compose/data
-uploaddir=../docker/compose/web/upload
+datadir=/var/web/datadir
+uploaddir=/var/web/upload
 server=http://localhost
 cookiedomain=localhost
 cookielivetime=1209600
