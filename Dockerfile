@@ -10,6 +10,7 @@ LABEL authors="jiezi19971224@gmail.com"
 
 WORKDIR /home/backend/
 
+COPY ./config/auth_model.conf /home/backend/config/auth_model.conf
 COPY ./config/config.ini.example /home/backend/config/config.ini
 
 COPY --from=0 /backend/ahpuoj /home/backend/ahpuoj
