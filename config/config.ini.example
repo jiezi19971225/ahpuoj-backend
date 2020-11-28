@@ -1,27 +1,34 @@
 [project]
-datadir=/var/web/datadir
-uploaddir=/var/web/upload
+# 开发时更改
+datadir=/var/oj/problemdata
+uploaddir=/var/oj/upload
 server=http://localhost
 cookiedomain=localhost
 cookielivetime=1209600
 enviroment=debug
 
-
 [mysql]
-host=localhost
+host=db
+port=3306
+database=oj
+user=root
+password=123456
+
+[mysql_slave]
+host=db-slave
 port=3306
 database=oj
 user=root
 password=123456
 
 [redis]
-host=localhost
+host=redis
 port=6379
 password=123456
 cachelivetime=1800
 
 [rabbitmq]
-host=localhost
+host=rabbitmq
 port=5672
 user=root
 password=123456
@@ -29,15 +36,15 @@ password=123456
 [mail]
 user=
 pass=
-host=
-port=
+host=smtp.163.com
+port=25
 
 [token]
 expire=
 
 [language]
 number=18
-mask=131147
+mask=196683
 langname=C,Cpp,Pascal,Java,Ruby,Bash,Python,PHP,Perl,CSharp,Objc,FreeBasic,Schema,Clang,Clang++,Lua,Javascript,Go
 
 [preset]
