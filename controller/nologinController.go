@@ -1118,7 +1118,7 @@ on date(s.in_date) <= dualdate.date
 	group by dualdate.date order by dualdate.date asc`, user.ID).Find(&recentSubmitStatistic)
 
 	var rank int64
-	ORM.Where("solved > ?", user.Solved).Or(ORM.Where("solved = ?", user.Solved).Where("submit < ?", user.Submit)).Count(&rank)
+	ORM.Model(entity.User{}).Where("solved > ?", user.Solved).Or(ORM.Where("solved = ?", user.Solved).Where("submit < ?", user.Submit)).Count(&rank)
 
 	type UserInfoDto struct {
 		entity.User

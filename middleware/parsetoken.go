@@ -5,6 +5,7 @@ import (
 	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/utils"
+	"encoding/json"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -37,18 +38,25 @@ func parseToken(c *gin.Context) (dto.UserWithRoleDto, error) {
 		c.Set("tokenExpireAt", claims.ExpiresAt)
 		username := claims.UserName
 		userEntity := entity.User{}
-		err = orm.ORM.Model(entity.User{}).Where("username = ?", username).Find(&userEntity).Error
-		if err != nil {
-			return user, errors.New("用户不存在")
-		}
-		orm.ORM.Model(entity.Role{}).Where("id = ?", userEntity.RoleId).Find(&role)
-		user.User = userEntity
-		user.Role = role.Name
-		// 判断用户登录token是否存在redis缓存中
 		conn := REDIS.Get()
 		defer conn.Close()
+		// 首先尝试从缓存中获取用户数据
+		cachedUserInfo, err := redis.Bytes(conn.Do("get", "userinfo:"+username))
+		if err == nil {
+			json.Unmarshal(cachedUserInfo, &user)
+		} else {
+			err = orm.ORM.Model(entity.User{}).Where("username = ?", username).Find(&userEntity).Error
+			if err != nil {
+				return user, errors.New("用户不存在")
+			}
+			orm.ORM.Model(entity.Role{}).Where("id = ?", userEntity.RoleId).Find(&role)
+			user.User = userEntity
+			user.Role = role.Name
+			serializedUserInfo, _ := json.Marshal(user)
+			conn.Do("set", "userinfo:"+username, serializedUserInfo)
+		}
+		// 判断用户登录token是否存在redis缓存中
 		storeToken, _ := redis.String(conn.Do("get", "token:"+username))
-
 		if storeToken != tokenString {
 			return user, errors.New("token已被废弃")
 		}

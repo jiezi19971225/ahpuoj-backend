@@ -57,6 +57,12 @@ func ResetNick(c *gin.Context) {
 	if err != nil {
 		panic(errors.New("该昵称已被使用"))
 	}
+
+	// 删除缓存的用户信息
+	conn := REDIS.Get()
+	defer conn.Close()
+	conn.Do("del", "userinfo:"+user.Username)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "昵称修改成功",
 		"show":    true,
@@ -388,6 +394,11 @@ func UploadAvatar(c *gin.Context) {
 		os.Remove(projectPath + user.Avatar)
 	}
 	ORM.Model(user.User).Update("avatar", url)
+
+	// 删除缓存的用户信息
+	conn := REDIS.Get()
+	defer conn.Close()
+	conn.Do("del", "userinfo:"+user.Username)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "头像上传成功",
