@@ -130,7 +130,9 @@ func NologinGetContestList(c *gin.Context) {
 
 // 访客获取评测记录列表的接口
 func NologinGetSolutionList(c *gin.Context) {
-
+	if err := ReadFromCacheByRequestURI(c); err == nil {
+		return
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	param := c.Query("param")
@@ -186,13 +188,16 @@ func NologinGetSolutionList(c *gin.Context) {
 		panic(err)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	resposneData := gin.H{
 		"message": "数据获取成功",
 		"total":   total,
 		"page":    page,
 		"perpage": perpage,
 		"data":    solutions,
-	})
+	}
+	serializedData, _ := json.Marshal(resposneData)
+	StoreToCacheByRequestURI(c, serializedData, 5)
+	c.JSON(http.StatusOK, resposneData)
 }
 
 // 获取评测记录信息的接口

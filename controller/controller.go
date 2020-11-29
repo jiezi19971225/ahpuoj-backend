@@ -6,9 +6,11 @@ import (
 	redisDao "ahpuoj/dao/redis"
 	"ahpuoj/dto"
 	"ahpuoj/service"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
+	"net/http"
 	"strconv"
 )
 
@@ -67,4 +69,35 @@ func Paginate(c *gin.Context) func(db *gorm.DB) *gorm.DB {
 		offset := (page - 1) * pageSize
 		return db.Offset(offset).Limit(pageSize)
 	}
+}
+
+// 根据请求URL缓存读取数据返回
+func ReadFromCacheByRequestURI(c *gin.Context) error {
+	user, loggedIn := GetUserInstance(c)
+	keyPrefix := "nologin"
+	if loggedIn {
+		keyPrefix = user.Role
+	}
+	conn := REDIS.Get()
+	defer conn.Close()
+	cachedData, err := redis.Bytes(conn.Do("get", keyPrefix+":"+c.Request.RequestURI))
+	if err == nil {
+		var jsonData gin.H
+		json.Unmarshal(cachedData, &jsonData)
+		c.JSON(http.StatusOK, jsonData)
+	}
+	return err
+}
+
+// 根据请求URL缓存数据
+func StoreToCacheByRequestURI(c *gin.Context, serializedData []byte, expire_seconds int) {
+	user, loggedIn := GetUserInstance(c)
+	keyPrefix := "nologin"
+	if loggedIn {
+		keyPrefix = user.Role
+	}
+	conn := REDIS.Get()
+	defer conn.Close()
+	conn.Do("set", keyPrefix+":"+c.Request.RequestURI, serializedData)
+	conn.Do("expire", keyPrefix+":"+c.Request.RequestURI, expire_seconds)
 }
