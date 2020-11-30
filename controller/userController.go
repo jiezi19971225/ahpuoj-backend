@@ -262,6 +262,7 @@ func SubmitToJudge(c *gin.Context) {
 			ContestId:  req.ContestId,
 			Num:        req.Num,
 			InDate:     time.Now(),
+			JudgeTime:  time.Now(),
 			IP:         c.ClientIP(),
 			Language:   req.Language,
 			CodeLength: len(req.Source),

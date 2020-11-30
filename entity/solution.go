@@ -18,7 +18,7 @@ type Solution struct {
 	Result     int         `json:"result"`
 	Language   int         `json:"language"`
 	IP         string      `gorm:"column:ip;" json:"ip"`
-	JudgeTime  null.String `gorm:"column:judgetime;" json:"judgetime"`
+	JudgeTime  time.Time   `gorm:"column:judgetime;" json:"judgetime"`
 	Valid      int         `json:"valid"`
 	CodeLength int         `json:"code_length"`
 	PassRate   float32     `json:"pass_rate"`

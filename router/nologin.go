@@ -9,6 +9,7 @@ import (
 // 游客路由
 func ApiNologinRouter(g *gin.RouterGroup) {
 	g.GET("/news", controller.NologinGetNewList)
+	g.GET("/problemjump", controller.NologinJumpProblem)
 	g.GET("/problem/:id", controller.NologinGetProblem)
 	g.GET("/problems", controller.NologinGetProblemList)
 	g.GET("/contest/:id", controller.NologinGetContest)

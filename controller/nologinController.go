@@ -10,6 +10,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -41,6 +42,31 @@ func NologinGetNewList(c *gin.Context) {
 	})
 }
 
+// 返回跳转问题的序号
+func NologinJumpProblem(c *gin.Context) {
+	action := c.Query("action")
+	id, _ := strconv.Atoi(c.Query("problemId"))
+	var newId int
+	var err error
+	switch action {
+	case "prev":
+		ORM.Raw("select id from problem where id < ? order by id desc limit 1", id).Scan(&newId)
+	case "next":
+		ORM.Raw("select id from problem where id > ? order by id asc limit 1", id).Scan(&newId)
+	case "random":
+		ORM.Raw(`SELECT t1.id FROM problem AS t1 JOIN (SELECT ROUND(RAND() * ((SELECT MAX(id) FROM problem)-(SELECT MIN(id) FROM problem))+(SELECT MIN(id) FROM problem)) AS id) AS t2 WHERE t1.id >= t2.id ORDER BY t1.id LIMIT 1`).
+			Scan(&newId)
+	}
+	log.Println(err)
+	if newId == 0 {
+		newId = id
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "数据获取成功",
+		"data":    newId,
+	})
+}
+
 // 访客获取问题列表的接口
 func NologinGetProblemList(c *gin.Context) {
 
@@ -51,7 +77,12 @@ func NologinGetProblemList(c *gin.Context) {
 	level := c.Query("level")
 	tagId := c.Query("tag_id")
 
-	query := ORM.Model(entity.Problem{}).Preload("Tags").Joins("left join problem_tag on problem.id = problem_tag.problem_id").Where("problem.defunct=0")
+	query := ORM.Model(entity.Problem{}).Preload("Tags").Joins("left join problem_tag on problem.id = problem_tag.problem_id")
+	// 非管理员无法查看隐藏的问题
+	if !IsAdmin(c) {
+		query.Where("problem.defunct=0")
+	}
+
 	if len(param) > 0 {
 		_, err := strconv.Atoi(param)
 		if err != nil {
@@ -95,7 +126,12 @@ func NologinGetContestList(c *gin.Context) {
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	param := c.Query("param")
 
-	query := ORM.Model(entity.Contest{}).Where("defunct=0")
+	query := ORM.Model(entity.Contest{})
+	// 非管理员无法查看隐藏的问题
+	if !IsAdmin(c) {
+		query.Where("defunct=0")
+	}
+
 	if len(param) > 0 {
 		query.Where("name like", "%"+param+"%")
 	}

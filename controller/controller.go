@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -60,6 +61,12 @@ func GetUserInstance(c *gin.Context) (dto.UserWithRoleDto, bool) {
 		user = userInterface
 	}
 	return user, loggedIn
+}
+
+func IsAdmin(c *gin.Context) bool {
+	user, loggedIn := GetUserInstance(c)
+	log.Print("isAdmin", loggedIn && user.Role != "user")
+	return loggedIn && user.Role != "user"
 }
 
 func Paginate(c *gin.Context) func(db *gorm.DB) *gorm.DB {

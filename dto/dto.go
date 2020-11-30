@@ -80,11 +80,13 @@ type ContestInfoDto struct {
 
 type SolutionInfoDto struct {
 	entity.Solution
-	Public       int    `json:"public"`
-	Username     string `json:"username"`
-	Nick         string `json:"nick"`
-	Avatar       string `json:"avatar"`
-	ProblemTitle string `json:"problem_title"`
+	InDate       utils.JSONDateTime `json:"in_date"`
+	JudgeTime    utils.JSONDateTime `gorm:"column:judgetime;" json:"judgetime"`
+	Public       int                `json:"public"`
+	Username     string             `json:"username"`
+	Nick         string             `json:"nick"`
+	Avatar       string             `json:"avatar"`
+	ProblemTitle string             `json:"problem_title"`
 }
 
 type IssueInfoDto struct {
