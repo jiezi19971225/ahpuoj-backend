@@ -827,7 +827,11 @@ func NologinGetSeries(c *gin.Context) {
 	var series entity.Series
 	id, _ := strconv.Atoi(c.Param("id"))
 
-	err = ORM.Model(entity.Series{}).Preload("Contests").First(&series, id).Error
+	err = ORM.Model(entity.Series{}).First(&series, id).Error
+	if err != nil {
+		panic(err)
+	}
+	err = ORM.Model(entity.Contest{}).Joins("inner join contest_series on contest.id =  contest_series.contest_id").Where("contest_series.series_id = ? and defunct = 0 and team_mode = ?", &series.ID, &series.TeamMode).Find(&series.Contests).Error
 	if err != nil {
 		panic(err)
 	}
@@ -855,7 +859,8 @@ func NologinGetSeries(c *gin.Context) {
 	ORM.Raw(`select s.problem_id,s.team_id,s.user_id,s.contest_id,s.num,s.in_date,s.result,u.username,u.nick,u.avatar as user_avatar,r.name as user_role from
 	solution s inner join user u on s.user_id = u.id
 	inner join role r on u.role_id = r.id
-	where s.contest_id in (` + contestIdStrListStr + `) order by s.user_id, s.in_date asc`).Find(&rankItems)
+	inner join contest c on s.contest_id = c.id
+	where s.contest_id in (`+contestIdStrListStr+`) and C.defunct = 0 and C.team_mode = ? order by s.user_id, s.in_date asc`, series.TeamMode).Find(&rankItems)
 	lastUserId := 0
 
 	for _, rankItem := range rankItems {

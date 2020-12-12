@@ -121,7 +121,7 @@ func UpdateProblem(c *gin.Context) {
 		MemoryLimit:  req.MemoryLimit,
 	}
 	// 首先清除当前标签
-	err = ORM.Model(&problem).Updates(problem).Error
+	err = ORM.Select("spj", "level").Model(&problem).Updates(problem).Error
 	if err != nil {
 		panic(err)
 	}

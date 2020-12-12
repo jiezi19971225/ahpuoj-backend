@@ -119,7 +119,7 @@ func UpdateContest(c *gin.Context) {
 		Private:     req.Private,
 		TeamMode:    req.TeamMode,
 	}
-	err = ORM.Model(&contest).Updates(contest).Error
+	err = ORM.Select("private", "team_mode").Model(&contest).Updates(contest).Error
 	if err != nil {
 		panic(err)
 	}
