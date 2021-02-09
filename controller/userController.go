@@ -343,11 +343,11 @@ func DownloadDataFile(c *gin.Context) {
 	var temp int
 	ORM.Raw("select count(1) from solution where solution_id = ? and problem_id = ? and user_id = ?", sid, pid, user.ID).Scan(&temp)
 	if temp == 0 {
-		panic(errors.New("数据不存在"))
+		panic(errors.New("评测记录不存在"))
 	}
 	// 检验错误信息是否与数据库信息匹配
 	var runtimeinfo entity.RuntimeInfo
-	err := ORM.Model(entity.RuntimeInfo{}).Where("solution_id = ?", sid).Error
+	err := ORM.Model(entity.RuntimeInfo{}).Where("solution_id = ?", sid).First(&runtimeinfo).Error
 	if err != nil {
 		panic(err)
 	}
@@ -357,7 +357,7 @@ func DownloadDataFile(c *gin.Context) {
 	if errFilenameWithoutSuffix != filenameWithoutSuffix {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{
-				"message": "数据不存在",
+				"message": "文件不存在",
 				"show":    true,
 			})
 		return

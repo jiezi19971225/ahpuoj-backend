@@ -18,6 +18,7 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/silenceper/gowatch v0.0.0-20210208075621-ebe297c3f060 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd // indirect
