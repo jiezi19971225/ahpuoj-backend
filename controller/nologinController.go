@@ -133,7 +133,7 @@ func NologinGetContestList(c *gin.Context) {
 	}
 
 	if len(param) > 0 {
-		query.Where("name like", "%"+param+"%")
+		query.Where("name like ?", "%"+param+"%")
 	}
 
 	query.Order("id desc")

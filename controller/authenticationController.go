@@ -60,6 +60,9 @@ func Login(c *gin.Context) {
 }
 
 func Register(c *gin.Context) {
+
+	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
+
 	var req struct {
 		Email           string `json:"email" binding:"required,email,max=40"`
 		Username        string `json:"username" binding:"required,ascii,max=20"`
@@ -84,6 +87,7 @@ func Register(c *gin.Context) {
 		Password: hashedPassword,
 		Passsalt: salt,
 		RoleId:   1,
+		Avatar:   defaultAvatar,
 	}
 	err = ORM.Create(&user).Error
 	if utils.CheckError(c, err, "注册失败，邮箱/用户名/昵称可能已被注册") != nil {
