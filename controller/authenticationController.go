@@ -55,6 +55,7 @@ func Login(c *gin.Context) {
 		c.SetCookie("access-token", token, cookieLiveTime, "/", domain, false, false)
 		c.JSON(http.StatusOK, gin.H{
 			"message": "登录成功",
+			"show":    true,
 		})
 	}
 }
@@ -107,29 +108,33 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "注册成功",
 		"token":   token,
+		"show":    true,
 	})
 }
 
 // 发送重设密码邮件的接口
 func SendFindPassEmail(c *gin.Context) {
 	var req struct {
-		Email string `json:"email" binding:"required,email,max=40"`
+		Username string `json:"username" binding:"required,max=40"`
 	}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		panic(err)
 	}
 	var user entity.User
-	err = ORM.Model(entity.User{}).Where("email = ?", req.Email).First(&user).Error
+	err = ORM.Model(entity.User{}).Where("username = ?", req.Username).First(&user).Error
 	if err != nil {
 		panic(errors.New("用户不存在"))
+	}
+	if !user.Email.Valid {
+		panic(errors.New("用户未绑定邮箱"))
 	}
 	// 生成随机字符串
 	token := utils.GetRandomString(30)
 	ORM.Exec("insert into resetpassword(user_id,token,expired_at) values(?,?,date_add(NOW(),INTERVAL 1 hour)) on duplicate key update token = ?,expired_at=date_add(NOW(),INTERVAL 1 hour)", user.ID, token, token)
 	server, _ := config.Conf.GetValue("project", "server")
 	mailTo := []string{
-		req.Email,
+		user.Email.String,
 	}
 	//邮件主题
 	subject := "AHPUOJ重设密码邮件"
@@ -138,6 +143,7 @@ func SendFindPassEmail(c *gin.Context) {
 	utils.SendMail(mailTo, subject, body)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "已成功发送重设密码邮件，请前往邮箱查看",
+		"show":    true,
 	})
 }
 
@@ -158,6 +164,7 @@ func VeriryResetPassToken(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "token验证成功，请立即重设密码",
+		"show":    true,
 	})
 }
 
@@ -198,6 +205,7 @@ func ResetPassByToken(c *gin.Context) {
 	ORM.Delete(&resetPassword)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "密码修改成功",
+		"show":    true,
 	})
 
 }
