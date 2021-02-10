@@ -95,7 +95,7 @@ type IssueInfoDto struct {
 	UpdatedAt    utils.JSONDateTime `json:"updated_at"`
 	Username     string             `json:"username"`
 	Nick         string             `json:"nick"`
-	UserAvatar   string             `json:"avatar"`
+	Avatar       string             `json:"avatar"`
 	ReplyCount   int                `json:"reply_count"`
 	ProblemTitle null.String        `json:"ptitle"`
 }
@@ -105,7 +105,7 @@ type ReplyInfoDto struct {
 	CreatedAt     utils.JSONDateTime `json:"created_at"`
 	UpdatedAt     utils.JSONDateTime `json:"updated_at"`
 	Username      string             `json:"username"`
-	ReplyUserNick string             `json:"rnick"`
+	ReplyUserNick string             `json:"reply_user_nick"`
 	Nick          string             `json:"user_nick"`
 	Avatar        string             `json:"avatar"`
 	ReplyCount    int                `json:"reply_count"`

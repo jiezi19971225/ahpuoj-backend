@@ -88,7 +88,7 @@ func NologinGetProblemList(c *gin.Context) {
 		if err != nil {
 			query.Where("problem.title like ?", "%"+param+"%")
 		} else {
-			query.Where("problem.id = ?", "%"+param+"%")
+			query.Where("problem.id = ?", param)
 		}
 	}
 	if len(tagId) > 0 {
@@ -860,7 +860,7 @@ func NologinGetSeries(c *gin.Context) {
 	solution s inner join user u on s.user_id = u.id
 	inner join role r on u.role_id = r.id
 	inner join contest c on s.contest_id = c.id
-	where s.contest_id in (`+contestIdStrListStr+`) and C.defunct = 0 and C.team_mode = ? order by s.user_id, s.in_date asc`, series.TeamMode).Find(&rankItems)
+	where s.contest_id in (`+contestIdStrListStr+`) and c.defunct = 0 and c.team_mode = ? order by s.user_id, s.in_date asc`, series.TeamMode).Find(&rankItems)
 	lastUserId := 0
 
 	for _, rankItem := range rankItems {
@@ -1006,7 +1006,7 @@ func NologinGetIssueList(c *gin.Context) {
 	var total int64
 	query.Count(&total)
 	results := []dto.IssueInfoDto{}
-	err = query.Scopes(Paginate(c)).Select("user.username,user.nick,user.avatar,issue.*,problem.title ptitle,(select count(1) from reply where issue_id = issue.id) as reply_count").
+	err = query.Scopes(Paginate(c)).Select("user.username,user.nick,user.avatar,issue.*,problem.title problem_title,(select count(1) from reply where issue_id = issue.id) as reply_count").
 		Order("issue.created_at desc").Find(&results).Error
 	if err != nil {
 		panic(err)
@@ -1065,8 +1065,7 @@ func NologinGetIssue(c *gin.Context) {
 	if loggedIn && user.Role != "user" {
 		query.Unscoped()
 	}
-	err = query.Scopes(Paginate(c)).Select("user.username,user.nick,user.avatar,reply.*,u2.nick as rnick,(select count(1) from reply  r where reply.id = r.reply_id) as reply_count").
-		Order("reply.created_at asc").Find(&replys).Error
+	err = query.Scopes(Paginate(c)).Order("reply.created_at asc").Find(&replys).Error
 	if err != nil {
 		panic(err)
 	}
@@ -1092,7 +1091,7 @@ func NologinGetIssue(c *gin.Context) {
 	total := len(issueReplys)
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "数据获取成2123功",
+		"message":      "数据获取成功",
 		"total":        total,
 		"page":         page,
 		"perpage":      perpage,
