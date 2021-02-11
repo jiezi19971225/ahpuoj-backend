@@ -45,7 +45,7 @@ func IndexSeriesContest(c *gin.Context) {
 	seriesId, _ := strconv.Atoi(c.Param("id"))
 	query := ORM.Model(entity.Contest{}).Joins("inner join contest_series on contest.id = contest_series.contest_id").Where("contest_series.series_id = ?", seriesId)
 	if len(param) > 0 {
-		query.Where("contest.name like", "%"+param+"%")
+		query.Where("contest.name like ?", "%"+param+"%")
 	}
 	contests := []entity.Contest{}
 	var total int64

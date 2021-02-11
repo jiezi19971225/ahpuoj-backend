@@ -41,7 +41,7 @@ func (this *SeriesService) AddContest(series *entity.Series, contest *entity.Con
 	}
 	// 检查是否已经添加进了系列中
 	var count int64
-	this.Model(&entity.ContestTeam{}).Where("contest_id = ? and team_id = ?", series.ID, contest.ID).Count(&count)
+	this.Model(&entity.ContestSeries{}).Where("series_id = ? and contest_id = ?", series.ID, contest.ID).Count(&count)
 	if count > 0 {
 		panic(errors.New("该竞赛作业已经在该系列中"))
 	}
