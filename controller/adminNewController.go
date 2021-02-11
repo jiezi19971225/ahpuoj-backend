@@ -67,6 +67,7 @@ func StoreNew(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "新建新闻成功",
 		"new":     new,
+		"show":    true,
 	})
 }
 
@@ -89,6 +90,7 @@ func UpdateNew(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "编辑新闻成功",
 		"new":     new,
+		"show":    true,
 	})
 }
 
@@ -100,6 +102,7 @@ func DeleteNew(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "删除新闻成功",
+		"show":    true,
 	})
 }
 
@@ -114,6 +117,7 @@ func ToggleNewStatus(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改新闻状态成功",
+		"show":    true,
 	})
 }
 
@@ -138,5 +142,6 @@ func ToggleNewTopStatus(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "更改新闻置顶状态成功",
+		"show":    true,
 	})
 }

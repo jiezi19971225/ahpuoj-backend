@@ -18,7 +18,7 @@ func (this *UserService) List(c *gin.Context) ([]entity.User, int64) {
 
 	query.Where("is_compete_user = ?", userType)
 	if len(param) > 0 {
-		query.Where("name like ?", "%"+param+"%")
+		query.Where(query.Where("username like ?", "%"+param+"%").Or("nick like ?", "%"+param+"%"))
 	}
 	var total int64
 	query.Count(&total)

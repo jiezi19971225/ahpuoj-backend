@@ -113,7 +113,7 @@ func UpdateSeries(c *gin.Context) {
 		TeamMode:    req.TeamMode,
 	}
 	// 默认 updates 只会更新非0值，需要手动指定
-	err = ORM.Select("team_mode").Model(&series).Updates(series).Error
+	err = ORM.Select("name", "description", "team_mode").Model(&series).Updates(series).Error
 	if err != nil {
 		panic(err)
 	}
