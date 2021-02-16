@@ -85,6 +85,7 @@ func StoreProblem(c *gin.Context) {
 		enforcer.AddPolicy(idStr, "/api/admin/problem/"+problemIdStr+"/data/:filename", "DELETE")
 	}
 	problemService.AddTags(&problem, req.Tags)
+
 	// 同步到 redis 缓存
 	if stringify, err := json.Marshal(problem); err == nil {
 		conn.Do("set", "problem:"+strconv.Itoa(problem.ID), stringify)
@@ -93,6 +94,7 @@ func StoreProblem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "新建问题成功",
 		"show":    true,
+		"problem": problem,
 	})
 }
 
@@ -120,7 +122,6 @@ func UpdateProblem(c *gin.Context) {
 		TimeLimit:    req.TimeLimit,
 		MemoryLimit:  req.MemoryLimit,
 	}
-	// 首先清除当前标签
 	err = ORM.Select("id", "title", "description", "input", "output", "sample_input", "sample_output", "spj", "level", "hint", "time_limit", "memory_limit").Model(&problem).Updates(problem).Error
 	if err != nil {
 		panic(err)

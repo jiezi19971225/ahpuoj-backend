@@ -11,6 +11,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/plugin/dbresolver"
 	"log"
 	"os"
 	"strconv"
@@ -22,7 +23,7 @@ type ProblemService struct {
 
 func (this *ProblemService) List(c *gin.Context) ([]dto.ProblemDto, int64) {
 	param := c.Query("param")
-	query := this.Model(&entity.Problem{})
+	query := this.Model(&dto.ProblemDto{}).Preload("Tags")
 
 	if len(param) > 0 {
 		query.Where("title like ?", "%"+param+"%")
@@ -32,10 +33,6 @@ func (this *ProblemService) List(c *gin.Context) ([]dto.ProblemDto, int64) {
 	var results []dto.ProblemDto
 	query.Scopes(utils.Paginate(c)).Order("problem.id desc").Select("problem.*", "user.username").Joins("inner join user on problem.user_id = user.id").Find(&results)
 
-	// 加载标签数据
-	for _, result := range results {
-		this.Model(&result.Problem).Association("Tags").Find(&result.Tags)
-	}
 	return results, total
 }
 
@@ -122,6 +119,8 @@ func (this *ProblemService) AddTags(problem *entity.Problem, reqTags []interface
 			}
 		}
 	}
+	// 强制走主库
+	this.Clauses(dbresolver.Write).Model(&problem).Association("Tags").Find(&problem.Tags)
 }
 
 func (this *ProblemService) ReplaceTags(problem *entity.Problem, reqTags []interface{}) {

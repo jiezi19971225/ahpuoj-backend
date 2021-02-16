@@ -26,7 +26,7 @@ type Problem struct {
 	CreatedAt    time.Time                `json:"created_at"`
 	UpdatedAt    time.Time                `json:"updated_at"`
 	CreatorId    int                      `gorm:"column:user_id;" json:"creator_id"`
-	Tags         []Tag                    `gorm:"many2many:problem_tag;" json:"tags"`
+	Tags         []Tag                    `gorm:"many2many:problem_tag;joinForeignKey:problem_id;joinReferences:tag_id;" json:"tags"`
 }
 
 func (Problem) TableName() string {

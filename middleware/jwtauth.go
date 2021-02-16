@@ -31,19 +31,19 @@ func JwtauthMiddleware() gin.HandlerFunc {
 				if user.Defunct == 0 {
 					c.Next()
 				} else {
-					c.AbortWithStatusJSON(400, gin.H{
+					c.AbortWithStatusJSON(403, gin.H{
 						"message": "该账号已被管理员封禁，请联系管理员解封",
 					})
 				}
 			} else {
-				c.AbortWithStatusJSON(400, gin.H{
+				c.AbortWithStatusJSON(403, gin.H{
 					"message": "认证失败,请重新登录",
 				})
 			}
 		} else if ve, ok := err.(*jwt.ValidationError); ok {
 			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
 				utils.Consolelog("ERROR", ve.Errors)
-				c.AbortWithStatusJSON(400, gin.H{
+				c.AbortWithStatusJSON(403, gin.H{
 					"message": "token非法",
 				})
 			} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
@@ -75,22 +75,22 @@ func JwtauthMiddleware() gin.HandlerFunc {
 						}
 						c.Next()
 					} else {
-						c.AbortWithStatusJSON(400, gin.H{
+						c.AbortWithStatusJSON(403, gin.H{
 							"message": "token已过期，请重新登录",
 						})
 					}
 				} else {
-					c.AbortWithStatusJSON(400, gin.H{
+					c.AbortWithStatusJSON(403, gin.H{
 						"message": "token认证失败",
 					})
 				}
 			} else {
-				c.AbortWithStatusJSON(400, gin.H{
+				c.AbortWithStatusJSON(403, gin.H{
 					"message": "无法处理token",
 				})
 			}
 		} else {
-			c.AbortWithStatusJSON(400, gin.H{
+			c.AbortWithStatusJSON(403, gin.H{
 				"message": "token认证失败",
 			})
 		}
