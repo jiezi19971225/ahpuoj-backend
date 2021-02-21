@@ -17,8 +17,10 @@ func init() {
 	var err error
 	dbMasterCfg, _ := config.Conf.GetSection("mysql")
 	dbSlaveCfg, _ := config.Conf.GetSection("mysql_slave")
-	path := strings.Join([]string{dbMasterCfg["user"], ":", dbMasterCfg["password"], "@tcp(", dbMasterCfg["host"], ":", dbMasterCfg["port"], ")/", dbMasterCfg["database"], "?charset=utf8", "&parseTime=true"}, "")
-	slavePath := strings.Join([]string{dbSlaveCfg["user"], ":", dbSlaveCfg["password"], "@tcp(", dbSlaveCfg["host"], ":", dbSlaveCfg["port"], ")/", dbSlaveCfg["database"], "?charset=utf8", "&parseTime=true"}, "")
+	// 需要设置时区，否则解析时采用 +0 时区
+	paramString := "?charset=utf8&parseTime=true&loc=Local"
+	path := strings.Join([]string{dbMasterCfg["user"], ":", dbMasterCfg["password"], "@tcp(", dbMasterCfg["host"], ":", dbMasterCfg["port"], ")/", dbMasterCfg["database"], paramString}, "")
+	slavePath := strings.Join([]string{dbSlaveCfg["user"], ":", dbSlaveCfg["password"], "@tcp(", dbSlaveCfg["host"], ":", dbSlaveCfg["port"], ")/", dbSlaveCfg["database"], paramString}, "")
 	ORM, err = gorm.Open(mysql.Open(path), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})

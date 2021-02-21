@@ -60,8 +60,8 @@ func StoreContest(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
-	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
+	startTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, time.Local)
+	endTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, time.Local)
 	contest := entity.Contest{
 		Name:        req.Name,
 		StartTime:   startTime,
@@ -97,6 +97,7 @@ func StoreContest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "新建竞赛&作业成功",
 		"show":    true,
+		"contest": contest,
 	})
 }
 
@@ -107,8 +108,8 @@ func UpdateContest(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	startTime, _ := time.Parse("2006-01-02 15:04:05", req.StartTime)
-	endTime, _ := time.Parse("2006-01-02 15:04:05", req.EndTime)
+	startTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, time.Local)
+	endTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, time.Local)
 	contest := entity.Contest{
 		ID:          id,
 		Name:        req.Name,
