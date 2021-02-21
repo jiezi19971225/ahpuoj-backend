@@ -26,8 +26,7 @@ COPY ./config/config.ini.example /home/backend/config/config.ini
 
 COPY --from=0 /backend/ahpuoj /home/backend/ahpuoj
 
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+COPY ./tini /tini
 RUN chmod +x /tini
 WORKDIR /home/backend/
 ENTRYPOINT ["/tini", "--", "./ahpuoj"]
