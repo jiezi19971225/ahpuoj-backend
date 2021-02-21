@@ -55,7 +55,7 @@ func (this *ContestService) AttachProblems(contest *entity.Contest) dto.ContestD
 func (this *ContestService) AddProblems(contest *entity.Contest, reqProblems string) {
 	pieces := strings.Split(reqProblems, ",")
 	if len(pieces) > 0 && len(pieces[0]) > 0 {
-		cnt := 0
+		cnt := 1
 		for _, value := range pieces {
 			problemId, _ := strconv.Atoi(value)
 			problem := entity.Problem{
