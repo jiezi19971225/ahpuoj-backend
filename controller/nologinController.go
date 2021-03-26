@@ -50,11 +50,11 @@ func NologinJumpProblem(c *gin.Context) {
 	var err error
 	switch action {
 	case "prev":
-		ORM.Raw("select id from problem where id < ? order by id desc limit 1", id).Scan(&newId)
+		ORM.Raw("select id from problem where id < ? ant defunct = 0 order by id desc limit 1", id).Scan(&newId)
 	case "next":
-		ORM.Raw("select id from problem where id > ? order by id asc limit 1", id).Scan(&newId)
+		ORM.Raw("select id from problem where id > ? and defunct = 0 order by id asc limit 1", id).Scan(&newId)
 	case "random":
-		ORM.Raw(`SELECT t1.id FROM problem AS t1 JOIN (SELECT ROUND(RAND() * ((SELECT MAX(id) FROM problem)-(SELECT MIN(id) FROM problem))+(SELECT MIN(id) FROM problem)) AS id) AS t2 WHERE t1.id >= t2.id ORDER BY t1.id LIMIT 1`).
+		ORM.Raw(`SELECT t1.id FROM problem AS t1 JOIN (SELECT ROUND(RAND() * ((SELECT MAX(id) FROM problem)-(SELECT MIN(id) FROM problem))+(SELECT MIN(id) FROM problem)) AS id) AS t2 WHERE t1.id >= t2.id and t1.defunct = 0 ORDER BY t1.id LIMIT 1`).
 			Scan(&newId)
 	}
 	log.Println(err)
