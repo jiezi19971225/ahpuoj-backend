@@ -237,7 +237,7 @@ func (this *ProblemService) RejudgeProblem(id int) {
 /**
 将问题列表转化为带有问题完成状态的列表，同时去除问题内容等字段
 */
-func (this *ProblemService) ConvertList(problemList []entity.Problem, loggedIn bool) []dto.ProblemListItemDto {
+func (this *ProblemService) ConvertList(problemList []entity.Problem, contestId int, user dto.UserWithRoleDto, loggedIn bool) []dto.ProblemListItemDto {
 
 	problemIds := []int{}
 	results := []dto.ProblemListItemDto{}
@@ -259,8 +259,14 @@ func (this *ProblemService) ConvertList(problemList []entity.Problem, loggedIn b
 		acProblemIds := []int{}
 		waProblemIds := []int{}
 
-		this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result = ?", constant.ACCEPT).Group("problem_id").Pluck("problem_id", &acProblemIds)
-		this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result != ?", constant.ACCEPT).Group("problem_id").Pluck("problem_id", &waProblemIds)
+		acQuery := this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result = ?", constant.ACCEPT).Where("user_id = ?", user.ID).Group("problem_id")
+		waQuery := this.Model(entity.Solution{}).Where("problem_id in ?", problemIds).Where("result != ?", constant.ACCEPT).Where("user_id = ?", user.ID).Group("problem_id")
+		if contestId != 0 {
+			acQuery = acQuery.Where("contest_id = ?", contestId)
+			waQuery = waQuery.Where("contest_id = ?", contestId)
+		}
+		acQuery.Pluck("problem_id", &acProblemIds)
+		waQuery.Pluck("problem_id", &waProblemIds)
 
 		for index, result := range results {
 			if utils.IndexOf(waProblemIds, result.ID) != -1 {

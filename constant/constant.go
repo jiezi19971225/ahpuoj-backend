@@ -41,3 +41,7 @@ const PROBLEM_WA = 2
 const CONTEST_NOT_START = 1
 const CONTEST_RUNNING = 2
 const CONTEST_FINISH = 3
+
+const ROLE_USER = 1
+const ROLE_ADMIN = 2
+const ROLE_SUBADMIN = 3

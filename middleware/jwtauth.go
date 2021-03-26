@@ -63,8 +63,7 @@ func JwtauthMiddleware() gin.HandlerFunc {
 								newToken := utils.CreateToken(user.Username)
 								conn := REDIS.Get()
 								defer conn.Close()
-								conn.Do("set", "token:"+user.Username, newToken)
-								conn.Do("expire", "token:"+user.Username, 60*60*24*15)
+								conn.Do("setex", "token:"+user.Username, 60*60*24*15, newToken)
 								// 返回新的token
 								domain, _ := config.Conf.GetValue("project", "server")
 								cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")

@@ -70,7 +70,7 @@ func NologinJumpProblem(c *gin.Context) {
 // 访客获取问题列表的接口
 func NologinGetProblemList(c *gin.Context) {
 
-	_, loggedIn := GetUserInstance(c)
+	user, loggedIn := GetUserInstance(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perpage, _ := strconv.Atoi(c.DefaultQuery("perpage", "20"))
 	param := c.Query("param")
@@ -108,7 +108,7 @@ func NologinGetProblemList(c *gin.Context) {
 		panic(err)
 	}
 
-	results := problemService.ConvertList(problems, loggedIn)
+	results := problemService.ConvertList(problems, 0, user, loggedIn)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "数据获取成功",
@@ -496,7 +496,7 @@ func NologinGetContest(c *gin.Context) {
 			}
 		}
 	}
-	problemList := problemService.ConvertList(contest.Problems, loggedIn)
+	problemList := problemService.ConvertList(contest.Problems, contest.ID, user, loggedIn)
 
 	contest.Problems = nil
 	result := struct {
@@ -593,6 +593,7 @@ func NologinGetContestRankList(c *gin.Context) {
 					Time:    0,
 					WaCount: make([]int, problemCount),
 					AcTime:  make([]int, problemCount),
+					AcFlag:  make([]bool, problemCount),
 					User: struct {
 						Id       int    `json:"id"`
 						Username string `json:"username"`

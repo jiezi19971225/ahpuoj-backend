@@ -2,9 +2,12 @@ package controller
 
 import (
 	"ahpuoj/config"
+	"ahpuoj/dao/orm"
+	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/utils"
 	"crypto/sha1"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gopkg.in/guregu/null.v4"
@@ -45,9 +48,17 @@ func Login(c *gin.Context) {
 		utils.Consolelog(token)
 		conn := REDIS.Get()
 		defer conn.Close()
-		reply, err := conn.Do("set", "token:"+req.Username, token)
-		utils.Consolelog(reply, err)
-		conn.Do("expire", "token:"+req.Username, 60*60*24*15)
+		conn.Do("setex", "token:"+req.Username, 60*60*24*15, token)
+
+		// 用户登录刷新redis缓存信息
+		var role entity.Role
+		var userWithRole dto.UserWithRoleDto
+		orm.ORM.Model(entity.Role{}).Where("id = ?", user.RoleId).Find(&role)
+		userWithRole.User = user
+		userWithRole.Role = role.Name
+		serializedUserInfo, _ := json.Marshal(userWithRole)
+		conn.Do("setex", "userinfo:"+user.Username, 60*60*24, serializedUserInfo)
+
 		// 设置cookies
 		domain, _ := config.Conf.GetValue("project", "cookiedomain")
 		cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")
@@ -98,8 +109,7 @@ func Register(c *gin.Context) {
 	// 更新redis的token,过期时间为15天
 	conn := REDIS.Get()
 	defer conn.Close()
-	conn.Do("set", "token:"+user.Username, token)
-	conn.Do("expire", "token:"+user.Username, 60*60*24*15)
+	conn.Do("setex", "token:"+user.Username, 60*60*24*15, token)
 	// 设置cookies
 	domain, _ := config.Conf.GetValue("project", "cookiedomain")
 	cookieLiveTimeStr, _ := config.Conf.GetValue("project", "cookielivetime")

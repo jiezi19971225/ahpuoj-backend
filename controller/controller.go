@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -65,7 +64,6 @@ func GetUserInstance(c *gin.Context) (dto.UserWithRoleDto, bool) {
 
 func IsAdmin(c *gin.Context) bool {
 	user, loggedIn := GetUserInstance(c)
-	log.Print("isAdmin", loggedIn && user.Role != "user")
 	return loggedIn && user.Role != "user"
 }
 

@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"ahpuoj/config"
+	"ahpuoj/constant"
 	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/utils"
@@ -15,6 +17,8 @@ import (
 )
 
 func CompeteAccountGenerator(c *gin.Context) {
+	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
+
 	var req struct {
 		Prefix string `json:"prefix" binding:"required,max=15"`
 		Number int    `json:"number" binding:"required,min=1,max=200"`
@@ -37,6 +41,8 @@ func CompeteAccountGenerator(c *gin.Context) {
 			Email:         null.StringFrom(""),
 			Password:      hashedPassword,
 			IsCompeteUser: 1,
+			RoleId:        constant.ROLE_USER,
+			Avatar:        defaultAvatar,
 		}
 		err := ORM.Create(&user).Error
 		if err != nil {
@@ -57,6 +63,8 @@ func CompeteAccountGenerator(c *gin.Context) {
 }
 
 func UserAccountGenerator(c *gin.Context) {
+	defaultAvatar, _ := config.Conf.GetValue("preset", "avatar")
+
 	var req struct {
 		UserList string `json:"userlist" binding:"required"`
 	}
@@ -87,6 +95,8 @@ func UserAccountGenerator(c *gin.Context) {
 				Email:    null.StringFrom(""),
 				Password: hashedPassword,
 				Passsalt: salt,
+				RoleId:   constant.ROLE_USER,
+				Avatar:   defaultAvatar,
 			}
 			err := ORM.Create(&user).Error
 			if err == nil {

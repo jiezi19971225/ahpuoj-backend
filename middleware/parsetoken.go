@@ -53,7 +53,7 @@ func parseToken(c *gin.Context) (dto.UserWithRoleDto, error) {
 			user.User = userEntity
 			user.Role = role.Name
 			serializedUserInfo, _ := json.Marshal(user)
-			conn.Do("set", "userinfo:"+username, serializedUserInfo)
+			conn.Do("setex", "userinfo:"+username, 60*60*24, serializedUserInfo)
 		}
 		// 判断用户登录token是否存在redis缓存中
 		storeToken, _ := redis.String(conn.Do("get", "token:"+username))

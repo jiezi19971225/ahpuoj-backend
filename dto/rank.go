@@ -18,11 +18,12 @@ type RankItem struct {
 }
 
 type UserRankInfo struct {
-	Solved  int   `json:"solved"`
-	Time    int   `json:"time"`
-	WaCount []int `json:"wa_count"`
-	AcTime  []int `json:"ac_time"`
-	TeamId  int   `json:"team_id"`
+	Solved  int    `json:"solved"`
+	Time    int    `json:"time"`
+	WaCount []int  `json:"wa_count"`
+	AcTime  []int  `json:"ac_time"`
+	AcFlag  []bool `json:"-"`
+	TeamId  int    `json:"team_id"`
 	User    struct {
 		Id       int    `json:"id"`
 		Username string `json:"username"`
@@ -75,7 +76,7 @@ type TeamRankInfoList []TeamRankInfo
 type UserSeriesRankInfoList []UserSeriesRankInfo
 
 func (userRankInfo *UserRankInfo) Add(rankItem RankItem, startTime time.Time) {
-	if userRankInfo.AcTime[rankItem.Num-1] > 0 {
+	if userRankInfo.AcFlag[rankItem.Num-1] {
 		return
 	}
 	if rankItem.Result != 4 {
@@ -85,6 +86,7 @@ func (userRankInfo *UserRankInfo) Add(rankItem RankItem, startTime time.Time) {
 		// useTime可能为负，正常情况下不会出现这种问题，暂先不处理
 		useTime := int(acTime.Unix() - startTime.Unix())
 		userRankInfo.AcTime[rankItem.Num-1] = useTime
+		userRankInfo.AcFlag[rankItem.Num-1] = true
 		userRankInfo.Solved++
 		userRankInfo.Time += useTime + 1200*userRankInfo.WaCount[rankItem.Num-1]
 	}
