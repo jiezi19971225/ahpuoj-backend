@@ -31,7 +31,7 @@ func CompeteAccountGenerator(c *gin.Context) {
 	users := []dto.UserWithPasswordDto{}
 	for i := 1; i <= req.Number; i++ {
 		username := req.Prefix + strconv.Itoa(i)
-		randomPassword := utils.GetRandomString(15)
+		randomPassword := utils.GetRandomPasswordString(15)
 		h := sha1.New()
 		h.Write([]byte(randomPassword))
 		hashedPassword := fmt.Sprintf("%x", h.Sum(nil))

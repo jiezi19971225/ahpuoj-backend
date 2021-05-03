@@ -59,15 +59,24 @@ func GetCurrentPath() string {
 	return path.Dir(filename)
 }
 
-func GetRandomString(length int) string {
-	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	bytes := []byte(str)
+func GetRandomStringUseSeeds(seeds string, length int) string {
+	bytes := []byte(seeds)
 	var result []byte
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < length; i++ {
-		result = append(result, bytes[r.Intn(len(str))])
+		result = append(result, bytes[r.Intn(len(seeds))])
 	}
 	return string(result)
+}
+
+func GetRandomString(length int) string {
+	seeds := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	return GetRandomStringUseSeeds(seeds, length)
+}
+
+func GetRandomPasswordString(length int) string {
+	seeds := "23456789abcdefghjkmnpqrstuvwxyz"
+	return GetRandomStringUseSeeds(seeds, length)
 }
 
 func SaveFile(file multipart.File, ext string, category string) (string, error) {
