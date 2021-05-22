@@ -23,3 +23,6 @@ ahpuoj
 
 # script
 *.sh
+
+# sim
+!/sim/*.exe
