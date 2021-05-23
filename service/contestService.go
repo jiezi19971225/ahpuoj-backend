@@ -315,14 +315,17 @@ func (this *ContestService) SimCheck(contest *entity.Contest, solution *entity.S
 	}
 	currentPath := path.Join(currentRootDir, "sim")
 
-	if runtime.GOOS == "windows" {
-		simExeName += ".exe"
-	}
-
 	var cmd *exec.Cmd
 	var out bytes.Buffer
+	if runtime.GOOS == "windows" {
+		simExeName += ".exe"
+		cmd = exec.Command("./"+simExeName, "-pt "+strconv.Itoa(contest.CheckRepeatRate), userSourcePath, "|", contestSolutionsPath+"/*."+constant.LanguageExt[solution.Language])
+	} else {
+		// 踩坑 https://stackoverflow.com/questions/31467153/golang-failed-exec-command-that-works-in-terminal
+		cmdStr := "./" + simExeName + " -pt  " + strconv.Itoa(contest.CheckRepeatRate) + " " + userSourcePath + " '|' " + contestSolutionsPath + "/*." + constant.LanguageExt[solution.Language]
+		cmd = exec.Command("bash", "-c", cmdStr)
+	}
 
-	cmd = exec.Command("./"+simExeName, "-pt "+strconv.Itoa(contest.CheckRepeatRate), userSourcePath, "|", contestSolutionsPath+"/*."+constant.LanguageExt[solution.Language])
 	cmd.Dir = currentPath
 	cmd.Stdout = &out
 	err := cmd.Run()
