@@ -63,14 +63,16 @@ func StoreContest(c *gin.Context) {
 	startTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, time.Local)
 	endTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, time.Local)
 	contest := entity.Contest{
-		Name:        req.Name,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		Description: null.StringFrom(req.Description),
-		LangMask:    req.LangMask,
-		Private:     req.Private,
-		TeamMode:    req.TeamMode,
-		CreatorId:   user.ID,
+		Name:            req.Name,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		Description:     null.StringFrom(req.Description),
+		LangMask:        req.LangMask,
+		Private:         req.Private,
+		TeamMode:        req.TeamMode,
+		CheckRepeat:     req.CheckRepeat,
+		CheckRepeatRate: req.CheckRepeatRate,
+		CreatorId:       user.ID,
 	}
 	err = ORM.Create(&contest).Error
 	if err != nil {
@@ -111,16 +113,18 @@ func UpdateContest(c *gin.Context) {
 	startTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, time.Local)
 	endTime, _ := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, time.Local)
 	contest := entity.Contest{
-		ID:          id,
-		Name:        req.Name,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		Description: null.StringFrom(req.Description),
-		LangMask:    req.LangMask,
-		Private:     req.Private,
-		TeamMode:    req.TeamMode,
+		ID:              id,
+		Name:            req.Name,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		Description:     null.StringFrom(req.Description),
+		LangMask:        req.LangMask,
+		Private:         req.Private,
+		TeamMode:        req.TeamMode,
+		CheckRepeat:     req.CheckRepeat,
+		CheckRepeatRate: req.CheckRepeatRate,
 	}
-	err = ORM.Select("name", "start_time", "end_time", "description", "langmask", "private", "team_mode").Model(&contest).Updates(contest).Error
+	err = ORM.Select("name", "start_time", "end_time", "description", "langmask", "private", "team_mode", "check_repeat", "check_repeat_rate").Model(&contest).Updates(contest).Error
 	if err != nil {
 		panic(err)
 	}

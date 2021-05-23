@@ -7,14 +7,16 @@ type Casbin struct {
 }
 
 type Contest struct {
-	Name        string `json:"name" binding:"required,max=20"`
-	StartTime   string `json:"start_time"  binding:"required"`
-	EndTime     string `json:"end_time"  binding:"required"`
-	Description string `json:"description"`
-	Problems    string `json:"problems"`
-	LangMask    int    `json:"langmask"`
-	Private     int    `json:"private"  binding:"gte=0,lte=1"`
-	TeamMode    int    `json:"team_mode" ltefield=Private`
+	Name            string `json:"name" binding:"required,max=20"`
+	StartTime       string `json:"start_time"  binding:"required"`
+	EndTime         string `json:"end_time"  binding:"required"`
+	Description     string `json:"description"`
+	Problems        string `json:"problems"`
+	LangMask        int    `json:"langmask"`
+	Private         int    `json:"private"  binding:"gte=0,lte=1"`
+	TeamMode        int    `json:"team_mode" ltefield=Private`
+	CheckRepeat     int    `json:"check_repeat" binding:"gte=0,lte=1"`
+	CheckRepeatRate int    `json:"check_repeat_rate" binding:"gte=0,lte=100"`
 }
 
 type Issue struct {
