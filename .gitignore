@@ -26,3 +26,7 @@ ahpuoj
 
 # sim
 !/sim/*.exe
+
+# for sim compare
+
+/simtmp

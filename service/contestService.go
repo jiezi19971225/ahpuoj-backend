@@ -5,12 +5,18 @@ import (
 	"ahpuoj/dto"
 	"ahpuoj/entity"
 	"ahpuoj/utils"
+	"bytes"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"io/ioutil"
 	"log"
+	"os/exec"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -263,4 +269,74 @@ func (this *ContestService) CalcStatus(contest *entity.Contest) (status int) {
 	} else {
 		return constant.CONTEST_RUNNING
 	}
+}
+
+// 查重
+var mutex sync.Mutex
+
+func (this *ContestService) SimCheck(contest *entity.Contest, solution *entity.Solution, source string) (hasRepeat bool) {
+
+	currentRootDir := utils.GetCurrentExecDirectory()
+
+	type SolutionWithSource struct {
+		Source     string `db:"source" json:"source"`
+		SolutionId int    `db:"solution_id" json:"solution_id"`
+		Language   int    `db:"language" json:"language"`
+	}
+	var SolutionWithSourceList []SolutionWithSource
+	this.Raw("select source_code.solution_id,source_code.source,language from solution "+
+		"INNER JOIN source_code on solution.solution_id = source_code.solution_id "+
+		"where contest_id = ? and num = ? and user_id != ? and result = 4"+
+		" order by solution_id desc;", contest.ID, solution.Num, solution.UserId).Scan(&SolutionWithSourceList)
+
+	// 下面这一段进行了加锁处理
+	// TODO 这里的加锁处理应该可以优化
+	mutex.Lock()
+
+	// 将用户提交的代码写入临时文件
+	userSourcePath := path.Join(currentRootDir, "simtmp", "simtmp.txt")
+	ioutil.WriteFile(userSourcePath, []byte(source), 0777)
+
+	// 将竞赛通过的代码写入临时目录
+	contestSolutionsPath := path.Join(currentRootDir, "simtmp", "c"+strconv.Itoa(contest.ID))
+	utils.CreateDir(contestSolutionsPath, 0777)
+
+	for _, solution := range SolutionWithSourceList {
+		filePath := path.Join(contestSolutionsPath, strconv.Itoa(solution.SolutionId)+"."+constant.LanguageExt[solution.Language])
+		if pathExist, _ := utils.PathExists(filePath); !pathExist {
+			ioutil.WriteFile(filePath, []byte(solution.Source), 0777)
+		}
+	}
+
+	// 调用 sim 程序
+	var simExeName string
+	if name, ok := constant.SimExeMap[solution.Language]; ok {
+		simExeName = name
+	}
+	simExeName = "sim_text"
+
+	if runtime.GOOS == "windows" {
+		simExeName += ".exe"
+	}
+
+	currentPath := path.Join(currentRootDir, "sim")
+
+	var cmd *exec.Cmd
+	var out bytes.Buffer
+
+	cmd = exec.Command("./"+simExeName, "-pt "+strconv.Itoa(contest.CheckRepeatRate), userSourcePath, "|", contestSolutionsPath+"/*."+constant.LanguageExt[solution.Language])
+	cmd.Dir = currentPath
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	result := strings.Contains(out.String(), "consists for")
+
+	mutex.Unlock()
+
+	return result
 }

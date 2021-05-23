@@ -1,5 +1,16 @@
 package constant
 
+var SimExeMap map[int]string = make(map[int]string)
+
+/**
+常量初始化
+*/
+func init() {
+	SimExeMap[0] = "sim_c"
+	SimExeMap[1] = "sim_c++"
+	SimExeMap[3] = "sim_java"
+}
+
 var LanguageName = []string{"C", "C++", "Pascal", "Java", "Ruby", "Bash", "Python", "PHP", "Perl", "C#", "Obj-C", "FreeBasic", "Scheme", "Clang", "Clang++", "Lua", "JavaScript", "Go", "Other Language"}
 var LanguageExt = []string{"c", "cc", "pas", "java", "rb", "sh", "py", "php", "pl", "cs", "m", "bas", "scm", "c", "cc", "lua", "js", "go"}
 var JudgeResult = []string{

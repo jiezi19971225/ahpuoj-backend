@@ -211,6 +211,13 @@ func SubmitToJudge(c *gin.Context) {
 		panic(errors.New("提交失败，问题不存在"))
 	}
 
+	if req.ContestId > 0 {
+		err = ORM.Model(entity.Contest{}).First(&contest, req.ContestId).Error
+		if err != nil {
+			panic(errors.New("提交失败，竞赛不存在"))
+		}
+	}
+
 	submitable := false
 
 	// 管理员无提交限制
@@ -219,13 +226,7 @@ func SubmitToJudge(c *gin.Context) {
 	} else {
 		// 比赛的提交
 		if req.ContestId > 0 {
-
-			err = ORM.Model(entity.Contest{}).First(&contest, req.ContestId).Error
-			if err != nil {
-				panic(errors.New("提交失败，竞赛不存在"))
-			}
 			// 非管理员只有在比赛进行过程中并且有参加权限才能提交
-
 			status := contestService.CalcStatus(&contest)
 			// 比赛进行中
 			if status == constant.CONTEST_RUNNING {
@@ -267,6 +268,14 @@ func SubmitToJudge(c *gin.Context) {
 			Language:   req.Language,
 			CodeLength: len(req.Source),
 		}
+
+		// 查重判断
+		if contest.CheckRepeat == 1 {
+			if hasRepeat := contestService.SimCheck(&contest, &solution, req.Source); hasRepeat {
+				panic(errors.New("系统检测到您提交的代码与其他人的通过代码相似度过高，不允许提交"))
+			}
+		}
+
 		err = ORM.Create(&solution).Error
 		if err != nil {
 			panic(errors.New("保存提交记录失败"))

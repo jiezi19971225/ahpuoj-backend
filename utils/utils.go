@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 
@@ -51,6 +53,14 @@ func Consolelog(contents ...interface{}) {
 func Int64to32(i64 int64) int {
 	i32, _ := strconv.Atoi(strconv.FormatInt(i64, 10))
 	return i32
+}
+
+func GetCurrentExecDirectory() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0])) //返回绝对路径  filepath.Dir(os.Args[0])去除最后一个元素的路径
+	if err != nil {
+		Consolelog(err)
+	}
+	return strings.Replace(dir, "\\", "/", -1) //将\替换成/
 }
 
 func GetCurrentPath() string {
@@ -101,6 +111,13 @@ func PathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func CreateDir(path string, mask os.FileMode) error {
+	if isExist, _ := PathExists(path); isExist == false {
+		return os.MkdirAll(path, mask)
+	}
+	return nil
 }
 
 func GetTestCfg(path string) *goconfig.ConfigFile {
