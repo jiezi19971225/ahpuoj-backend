@@ -309,17 +309,15 @@ func (this *ContestService) SimCheck(contest *entity.Contest, solution *entity.S
 	}
 
 	// 调用 sim 程序
-	var simExeName string
+	simExeName := "sim_text"
 	if name, ok := constant.SimExeMap[solution.Language]; ok {
 		simExeName = name
 	}
-	simExeName = "sim_text"
+	currentPath := path.Join(currentRootDir, "sim")
 
 	if runtime.GOOS == "windows" {
 		simExeName += ".exe"
 	}
-
-	currentPath := path.Join(currentRootDir, "sim")
 
 	var cmd *exec.Cmd
 	var out bytes.Buffer
@@ -333,7 +331,7 @@ func (this *ContestService) SimCheck(contest *entity.Contest, solution *entity.S
 			panic(err)
 		}
 	}
-
+	log.Print(out.String())
 	result := strings.Contains(out.String(), "consists for")
 
 	mutex.Unlock()
