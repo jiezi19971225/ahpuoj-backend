@@ -298,7 +298,7 @@ func (this *ContestService) SimCheck(contest *entity.Contest, solution *entity.S
 	ioutil.WriteFile(userSourcePath, []byte(source), 0777)
 
 	// 将竞赛通过的代码写入临时目录
-	contestSolutionsPath := path.Join(currentRootDir, "simtmp", "c"+strconv.Itoa(contest.ID))
+	contestSolutionsPath := path.Join(currentRootDir, "simtmp", "c"+strconv.Itoa(contest.ID), "p"+strconv.Itoa(solution.Num))
 	utils.CreateDir(contestSolutionsPath, 0777)
 
 	for _, solution := range SolutionWithSourceList {
